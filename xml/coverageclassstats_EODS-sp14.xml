@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?><wps:Execute version="1.0.0" service="WPS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.opengis.net/wps/1.0.0" xmlns:wfs="http://www.opengis.net/wfs" xmlns:wps="http://www.opengis.net/wps/1.0.0" xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:gml="http://www.opengis.net/gml" xmlns:ogc="http://www.opengis.net/ogc" xmlns:wcs="http://www.opengis.net/wcs/1.1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xsi:schemaLocation="http://www.opengis.net/wps/1.0.0 http://schemas.opengis.net/wps/1.0.0/wpsAll.xsd">
+  <ows:Identifier>ras:CoverageClassStats</ows:Identifier>
+  <wps:DataInputs>
+    <wps:Input>
+      <ows:Identifier>coverage</ows:Identifier>
+      <wps:Reference mimeType="image/tiff" xlink:href="http://geoserver/wcs" method="POST">
+        <wps:Body>
+          <wcs:GetCoverage service="WCS" version="1.1.1">
+            <ows:Identifier>geonode:S2B_20191223_lat52lon075_T30UXC_ORB137_utm30n_osgb_vmsk_sharp_rad_srefdem_stdsref</ows:Identifier>
+            <wcs:DomainSubset>
+              <ows:BoundingBox crs="http://www.opengis.net/gml/srs/epsg.xml#27700">
+                <ows:LowerCorner>523990.0 177000.0</ows:LowerCorner>
+                <ows:UpperCorner>540230.0 182560.0</ows:UpperCorner>
+              </ows:BoundingBox>
+            </wcs:DomainSubset>
+            <wcs:Output format="image/tiff"/>
+          </wcs:GetCoverage>
+        </wps:Body>
+      </wps:Reference>
+    </wps:Input>
+    <wps:Input>
+      <ows:Identifier>stats</ows:Identifier>
+      <wps:Data>
+        <wps:LiteralData>mean</wps:LiteralData>
+      </wps:Data>
+    </wps:Input>
+    <wps:Input>
+      <ows:Identifier>band</ows:Identifier>
+      <wps:Data>
+        <wps:LiteralData>1</wps:LiteralData>
+      </wps:Data>
+    </wps:Input>
+    <wps:Input>
+      <ows:Identifier>classes</ows:Identifier>
+      <wps:Data>
+        <wps:LiteralData>10</wps:LiteralData>
+      </wps:Data>
+    </wps:Input>
+    <wps:Input>
+      <ows:Identifier>method</ows:Identifier>
+      <wps:Data>
+        <wps:LiteralData>NATURAL_BREAKS</wps:LiteralData>
+      </wps:Data>
+    </wps:Input>
+    <wps:Input>
+      <ows:Identifier>noData</ows:Identifier>
+      <wps:Data>
+        <wps:LiteralData>0</wps:LiteralData>
+      </wps:Data>
+    </wps:Input>
+  </wps:DataInputs>
+  <wps:ResponseForm>
+	<wps:ResponseDocument storeExecuteResponse="true" status="true">
+		<wps:Output asReference="true" mimeType="text/xml">
+			<ows:Identifier>results</ows:Identifier>
+		</wps:Output>
+	</wps:ResponseDocument>
+  </wps:ResponseForm>
+</wps:Execute>

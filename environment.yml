@@ -1,0 +1,9 @@
+name: eods
+channels:
+  - conda-forge
+dependencies:
+  - python=3
+  - pandas
+  - notebook
+  - urllib3
+  - requests

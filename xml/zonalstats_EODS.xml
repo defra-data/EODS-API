@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wps:Execute version="1.0.0" service="WPS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.opengis.net/wps/1.0.0" xmlns:wfs="http://www.opengis.net/wfs" xmlns:wps="http://www.opengis.net/wps/1.0.0" xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:gml="http://www.opengis.net/gml" xmlns:ogc="http://www.opengis.net/ogc" xmlns:wcs="http://www.opengis.net/wcs/1.1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xsi:schemaLocation="http://www.opengis.net/wps/1.0.0 http://schemas.opengis.net/wps/1.0.0/wpsAll.xsd">
+  <ows:Identifier>ras:RasterZonalStatistics</ows:Identifier>
+  <wps:DataInputs>
+    <wps:Input>
+      <ows:Identifier>data</ows:Identifier>
+      <wps:Reference mimeType="image/tiff" xlink:href="http://geoserver/wcs" method="POST">
+        <wps:Body>
+          <wcs:GetCoverage service="WCS" version="1.1.1">
+            <ows:Identifier>geonode:S2A_20190724_lat51lon222_T30UWB_ORB037_utm30n_osgb_vmsk_sharp_rad_srefdem_stdsref</ows:Identifier>
+            <wcs:DomainSubset>
+              <ows:BoundingBox crs="http://www.opengis.net/gml/srs/epsg.xml#27700">
+                <ows:LowerCorner>330580.0 61660.0</ows:LowerCorner>
+                <ows:UpperCorner>438890.0 172950.0</ows:UpperCorner>
+              </ows:BoundingBox>
+            </wcs:DomainSubset>
+            <wcs:Output format="image/tiff"/>
+          </wcs:GetCoverage>
+        </wps:Body>
+      </wps:Reference>
+    </wps:Input>
+    <wps:Input>
+      <ows:Identifier>band</ows:Identifier>
+      <wps:Data>
+        <wps:LiteralData>6</wps:LiteralData>
+      </wps:Data>
+    </wps:Input>
+    <wps:Input>
+      <ows:Identifier>zones</ows:Identifier>
+      <wps:Reference mimeType="text/xml" xlink:href="http://geoserver/wfs" method="POST">
+        <wps:Body>
+          <wfs:GetFeature service="WFS" version="1.0.0" outputFormat="GML2" xmlns:geonode="http://www.geonode.org/">
+            <wfs:Query typeName="geonode:SSSI_boundaries_class"/>
+          </wfs:GetFeature>
+        </wps:Body>
+      </wps:Reference>
+    </wps:Input>
+    <wps:Input>
+      <ows:Identifier>classification</ows:Identifier>
+      <wps:Reference mimeType="image/tiff" xlink:href="http://geoserver/wcs" method="POST">
+        <wps:Body>
+          <wcs:GetCoverage service="WCS" version="1.1.1">
+            <ows:Identifier>geonode:SSSI_boundaries_class_raster</ows:Identifier>
+            <wcs:DomainSubset>
+              <ows:BoundingBox crs="http://www.opengis.net/gml/srs/epsg.xml#27700">
+                <ows:LowerCorner>408655.92 90181.3576</ows:LowerCorner>
+                <ows:UpperCorner>418405.92 112321.3576</ows:UpperCorner>
+              </ows:BoundingBox>
+            </wcs:DomainSubset>
+            <wcs:Output format="image/tiff"/>
+          </wcs:GetCoverage>
+        </wps:Body>
+      </wps:Reference>
+    </wps:Input>
+  </wps:DataInputs> 
+	<wps:ResponseForm>
+		<wps:ResponseDocument storeExecuteResponse="true" status="true">
+			<wps:Output asReference="true" mimeType="text/csv">
+			  <ows:Identifier>statistics</ows:Identifier>
+			</wps:Output>
+		</wps:ResponseDocument>	
+	</wps:ResponseForm>    
+</wps:Execute>
