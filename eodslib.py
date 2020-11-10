@@ -227,9 +227,10 @@ def query_catalog(conn, **kwargs):
                         df['ARCSI_CLOUD_COVER'] =df['supplemental_information'].str.split(n=6).str[5]
 
                 if 'ignore_split_granules' in kwargs:
-                    df = ignore_split_granules(df)
+                    if kwargs['ignore_split_granules']:
+                        df = ignore_split_granules(df)
 
-                if 'find_least_cloud' in kwargs and kwargs['sat_id'] == 2:
+                if 'find_least_cloud' in kwargs and kwargs['sat_id'] == 2 and kwargs['find_least_cloud']:
                     df = find_minimum_cloud_list(df)
 
                 # make output paths
