@@ -11,3 +11,4 @@ dependencies:
   - matplotlib
   - shapely
   - pyproj
+  - xmltodict

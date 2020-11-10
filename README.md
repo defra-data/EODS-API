@@ -10,11 +10,24 @@ A collection of example scripts for Defra Core and ALB users of the Earth Observ
 4.	Open the Anaconda Powershell Prompt – this should now be available on your start menu.  Navigate to this directory using the Anaconda Powershell Prompt using the following command:  
 cd <filepath>
 5.	Create the environment using the following command:
-conda env create --file environment.yml python=3.6
-6.	Activate the environment using the following command: 
+```bash
+conda env create --file environment.yml
+```
+6.	Activate the environment using the following command
+```bash 
 conda activate eods
+```
 7.	Launch the Jupyter Notebook in your browser with the following command:
+```bash
 jupyter notebook
+```
 8.	The Jupyter Notebook should now be open in your web browser, enabling you to view and navigate the contents of your Miniconda directory.  Open the Scripts folder.  
 9.	Open the config file from the Scripts folder and add your user name and authentication token.
 10.	Open one of the notebooks from the Scripts folder, e.g. start with ‘simple-query’.
+
+# Updating your environment
+
+If for any reason you need to update your conda environment using the `environment.yml` file, use this command:
+```bash
+conda env update --file environment.yml
+```
