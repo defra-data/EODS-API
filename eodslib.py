@@ -3,8 +3,14 @@ module of library functions for programatic interaction with Defra's Earth
 Observation Data Service (EODS)
 
     AUTHOR          : Sam Franklin, CGI
-    LAST UPDATED    : 2020-09-11
+    LAST UPDATED    : 2020-11-16
 """
+
+# module-wide TODOs:
+# TODO: update doc strings on all functions
+# TODO: rename functions and reorder
+# TODO: review imports and initial settings
+# TODO: add new eods query function to use the safe granule list to filter out edge granules
 
 import os
 import sys
@@ -23,7 +29,356 @@ import shapely
 import shapely.wkt
 from shapely.ops import transform
 import pyproj
+import config
+import shutil
 os.environ['PROJ_NETWORK'] = 'OFF'
+
+def run_wps(conn, config_wpsprocess, **kwargs):
+    """
+    primary function to orchestrate running the wps job from submission to download (if required)
+
+    Parameters:
+    -----------
+        conn: dict,
+            Connection parameters
+            Example: conn = {'domain': 'https://earthobs.defra.gov.uk',
+                             'username': '<insert-username>',
+                             'access_token': '<insert-access-token>'}
+
+        config_wpsprocess: list or dict,
+            list of dictionaries for individual wps submission requests.
+            users can generate a list of multiple dictionaries, one dict per wps job
+            with "xml_config", this is dict of variables that templated into the xml
+            payload for the WPS request submission            
+            Example:
+                config_wpsprocess = [{'template_xml':'gsdownload_template.xml',
+                                    'xml_config':{
+                                        'template_layer_name':lyr,
+                                        'template_outputformat':'image/tiff',
+                                        'template_mimetype':'application/zip'},
+                                    'dl_bool':True
+                                    }]
+
+        output_dir: str or Pathlib object, optional,
+            user specified output directory
+
+        verify: str, optional:
+            add custom path to any organisation certificate stores that the
+            environment needs
+            Default Value:
+                * True
+            Possible Value:
+                * 'dir/dir/cert.file'    
+
+    Returns:
+    -----------
+        list_download_paths: list,
+            list of pathlib objects for downloaded output for further reuse
+
+    """
+
+    # set output path if not specified
+    if 'output_dir' not in kwargs:
+        kwargs['output_dir']=Path.cwd()
+
+    if 'verify' not in kwargs:
+        kwargs['verify'] = True
+
+    # set the request config dictionary 
+    request_config = {
+        'wps_server':conn['domain'] + '/geoserver/ows',
+        'access_token':conn['access_token'],
+        'headers':{'Content-type': 'application/xml','User-Agent': 'python'},
+        'verify':kwargs['verify']
+    }
+
+    # submit wps jobs
+    try:
+        execution_dict = submit_wps_queue(request_config, config_wpsprocess)
+    except Exception as error:
+        print(error.args)
+        print('The WPS submission has failed')
+    else:
+
+        # INITIALISE VARIABLES and drop the wps log file if it exists
+        path_output = make_output_dir(kwargs['output_dir'])        
+
+
+        # keep calling the wps job status until 'continue_process' = False 
+        while True:
+
+            execution_dict = poll_api_status(execution_dict, request_config, path_output)
+
+            if execution_dict['continue_process']:
+                time.sleep(15)
+            else:
+                break
+
+        # after download is complete, process downloaded files (eg renames and extracting zips)
+        if execution_dict['job_status'] == 'DOWNLOAD-SUCCESSFUL':
+            execution_dict = process_wps_downloaded_files(execution_dict)
+        
+        # set log file and job duration in dict
+        execution_dict['log_file_path'] = path_output / 'wps-log.csv'
+        execution_dict['total_job_duration'] = (execution_dict['timestamp_job_end'] - execution_dict['timestamp_job_start']).total_seconds() / 60
+
+        return execution_dict
+
+def submit_wps_queue(request_config, config_wpsprocess):
+   
+    print('\n\t\t### ' + datetime.utcnow().isoformat() + ' :: WPS SUBMISSION :: lyr=' + config_wpsprocess['xml_config']['template_layer_name'])
+
+    try:
+        # overwrite xml string with job specific parameters
+        payload = mod_the_xml(config_wpsprocess)
+
+        response = requests.post(
+            request_config['wps_server'],
+            params={'access_token':request_config['access_token'],'SERVICE':'WPS','VERSION':'1.0.0','REQUEST':'EXECUTE'},
+            data=payload,
+            headers=request_config['headers'],
+            verify=request_config['verify'])
+
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            # response status was not 200
+            raise ValueError('non-200 response, additional info' , str(e))
+
+        else:
+            if not response.text.find('ExceptionReport') > 0:
+
+                execution_dict = {
+                        'job_id':response.text.split('executionId=')[1].split('&')[0],
+                        'layer_name':config_wpsprocess['xml_config']['template_layer_name'],
+                        'timestamp_job_start':datetime.utcnow(),
+                        'continue_process':True,
+                        }
+
+                print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: WPS JOB SUBMITTED')
+                print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: WPS STATUS CHECK URL : ' + request_config['wps_server'] + '?SERVICE=WPS&VERSION=1.0.0&REQUEST=GETEXECUTIONSTATUS&EXECUTIONID=' + execution_dict['job_id'] + '&access_token=' + request_config['access_token'])
+                
+                return execution_dict
+            else:
+                raise ValueError('wps server returned an exception', str(response.text))
+                    
+    except ValueError as error:
+
+        # handle two different valueErrors for connection fail and incorrect WPS submission parmeters
+
+        execution_dict = error
+
+        print(datetime.utcnow().isoformat() + ' :: WPS submission failed :: check log for errors = ' + str(error.args))
+
+        return execution_dict
+
+def poll_api_status(execution_dict, request_config, path_output):
+    """
+    for each execution job, return the status of the job
+    """
+
+    try:
+
+        if execution_dict['continue_process']:
+
+            print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: CHECKING STATUS')
+
+            params = {
+                'access_token':request_config['access_token'],
+                'SERVICE':'WPS',
+                'VERSION':'1.0.0',
+                'REQUEST':'GetExecutionstatus',
+                'EXECUTIONID':execution_dict['job_id'],
+                }
+
+            response = requests.get(
+                request_config['wps_server'],
+                params=params,
+                headers=request_config['headers'],
+                verify=request_config['verify']
+                )
+
+            # parse xml to python dictionary 
+            d = xmltodict.parse(response.content)
+
+            if 'wps:ExecuteResponse' in d:
+
+                if 'wps:ProcessSucceeded' in d['wps:ExecuteResponse']['wps:Status']:
+
+                    execution_dict.update({
+                        'job_status':'READY-TO-DOWNLOAD',
+                        'dl_url':d['wps:ExecuteResponse']['wps:ProcessOutputs']['wps:Output']['wps:Reference']['@href'] + '&access_token=' + request_config['access_token'],
+                        'mime_type':d['wps:ExecuteResponse']['wps:ProcessOutputs']['wps:Output']['wps:Reference']['@mimeType'],
+                        'timestamp_ready_to_dl':datetime.utcnow(),
+                        })
+
+                    print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: READY FOR DOWNLOAD')
+
+                    # if successful, return status = DOWNLOADED
+                    execution_dict = download_wps_result_single(request_config, execution_dict, path_output)
+
+                elif 'wps:ProcessFailed' in d['wps:ExecuteResponse']['wps:Status']:
+
+                    print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: JOB-FAILED ... check LOG for further details')
+
+                    # TODO: add exception message. Needs testing
+                    execution_dict.update({
+                        'job_status':'WPS-FAILURE',
+                        'continue_process':False,
+                        'message':'GEOSERVER FAILURE REPORT',
+                        'timestamp_job_end':datetime.utcnow(),
+                        })
+                else:
+                    execution_dict.update({'job_status':'OUTSTANDING'})
+                    print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: STILL IN PROGRESS')
+
+            elif 'ows:ExceptionReport' in d:
+
+                exception_text = d['ows:ExceptionReport']['ows:Exception']['ows:ExceptionText']
+
+                execution_dict.update({
+                    'job_status':'WPS-GENERAL-ERROR',
+                    'continue_process':False,
+                    'message':'THIS IS A GENERAL ERROR WITH A WPS JOB. ERROR MESSAGE = ' + str(exception_text),
+                    'timestamp_job_end':datetime.utcnow(),
+                    })
+
+                print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: JOB-FAILED ... check LOG for further details')
+              
+        return execution_dict
+
+    except Exception as error:
+
+        print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: UNKNOWN EXCEPTION')
+
+        execution_dict.update({
+            'job_status':'UNKNOWN-GENERAL-ERROR',
+            'continue_process':False,
+            'message':'UNKNOWNN GENERAL ERROR ENCOUNTERED WHEN CHECKING STATUS OF WPS JOB. ERROR MESSAGE:' + str(error),
+            'timestamp_job_end':datetime.utcnow(),
+            })
+        return execution_dict
+
+def download_wps_result_single(request_config, execution_dict, path_output):
+    """
+    function to get a wps result if the response is SUCCEEDED AND download is set to True in the config
+    """
+    
+    file_extension = '.' + execution_dict['mime_type'].split('/')[1]
+    filename_stub = execution_dict['layer_name'].split(':')[-1]
+    dl_path = path_output / filename_stub
+    dl_path.mkdir(parents=True, exist_ok=True)        
+    local_file_name = Path(dl_path / str( filename_stub + file_extension))
+
+    # make three download attempts
+    for i in [1,2,3]:
+
+        print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: DOWNLOAD START : TRY ' + str(i) + ' of 3')
+        
+        try:
+
+            with requests.get(
+                execution_dict['dl_url'],
+                headers=request_config['headers'],
+                verify=request_config['verify'],
+                stream=True) as response:
+                 
+                with open(local_file_name, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192*1024):
+                        f.write(chunk)
+
+            print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: DOWNLOAD COMPLETE ON TRY ' + str(i))
+
+            execution_dict.update({
+                'job_status':'DOWNLOAD-SUCCESSFUL',
+                'continue_process':False,
+                'dl_file':local_file_name,
+                'file_extension':file_extension,
+                'filename_stub':filename_stub,
+                'timestamp_dl_end':datetime.utcnow(),
+                'timestamp_job_end':datetime.utcnow(),
+                'download_try':i
+                })
+
+            return execution_dict
+
+        except Exception as error:
+
+            if i == 3:
+
+                execution_dict.update({
+                    'job_status':'DOWNLOAD-FAILED',
+                    'continue_process':False,
+                    'message':str(error),
+                    'timestamp_job_end':datetime.utcnow(),
+                    'download_try': i,
+                    })
+
+                print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: STATUS : ' + execution_dict['job_status'] + ' :: MESSAGE :' + execution_dict['message'])
+
+                return execution_dict
+
+def process_wps_downloaded_files(execution_dict):
+    """
+    function to rename downloaded file if TIFF or extract from zip 
+    """
+    
+    try:
+
+        source_file_to_extract = execution_dict['dl_file']
+
+        print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: PROCESS DOWNLOAD START')
+
+        # handle rename of zip contents
+        if source_file_to_extract.suffix.lower() == '.zip':
+
+            zip_ref = ZipFile(source_file_to_extract, 'r')
+            zip_ref.extractall(source_file_to_extract.parent.parent)
+            zip_list = zip_ref.filelist
+            zip_ref.close()
+            source_file_to_extract.unlink()            
+
+            # loop through zip contents
+            for f in zip_list:
+            
+                f_path = Path(source_file_to_extract.parent.parent / f.filename)
+            
+                if f_path.suffix.lower() == ".sld":
+                    f_path.unlink()
+                else:
+                    Path(f_path).rename(source_file_to_extract.parent.parent / str(execution_dict['filename_stub'] + f_path.suffix.lower()))
+
+        else:
+            Path(source_file_to_extract).rename(source_file_to_extract.parent.parent / str(execution_dict['filename_stub'] + source_file_to_extract.suffix.lower()))
+
+        # del download directory
+        if source_file_to_extract.parent.is_dir():
+            source_file_to_extract.parent.rmdir()
+
+        execution_dict.update({
+            'job_status':'LOCAL-POST-PROCESSING-SUCCESSFUL',
+            'timestamp_extraction_end':datetime.utcnow(),
+            'timestamp_job_end':datetime.utcnow(),
+        })
+        
+        print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: PROCESS DOWNLOAD END')
+
+        return execution_dict
+
+    except Exception as error:
+
+        execution_dict.update({
+            'message':'ERROR in extraction of files :: MESSAGE = ' + str(error)
+        })
+
+        return execution_dict
+
+def output_log(list_of_results):
+
+    df = pd.DataFrame(list_of_results)
+    log_file_name = list_of_results[0]['log_file_path']
+    df.to_csv(log_file_name, index_label='num')
+    print('\t\t### ' + datetime.utcnow().isoformat() + ' :: JOB FINISHED. LOG FILE LOCATION : ' + str(log_file_name))
 
 def make_output_dir(path_output):
     """
@@ -40,21 +395,69 @@ def make_output_dir(path_output):
 def find_minimum_cloud_list(df):
     """
     eods query "special" keyword function
-    + takes an input dataframe, groups by the granule-reference, 
-    + sorts by cloud cover and takes the lowest cloud per granule
+    + runs ignore split granules function to filter out split granules
+    + cross checks the dataframe with a static csv file of 'safe' granule list
+    + then groups by the unique granule-reference
+    + sorts by cloud cover and takes the lowest cloud value per granule
     + returns a new dataframe
     """
 
-    df_min_cloud_per_granule = df.sort_values("ARCSI_CLOUD_COVER").groupby(["granule-ref"], as_index=False).first()
+    # handle the case where kwargs are {'find_least_cloud':True,'ignore_split_granules':False,}
+    # for this kwarg case, this can return split granules where SPLIT isn't in the title
+    # which could generate a mosaic that has split granules and therefore 'holes' in the coverage
+    # so run ignore_split_granules function in call cases where 'find_least_cloud=True'
+    df = ignore_split_granules(df)
 
-    return df_min_cloud_per_granule
+    # import safe granule-orb list
+    if Path(Path.cwd() / 'static' / 'safe-granule-orbit-list.txt').exists():
+        df_safe_list = pd.read_csv(Path.cwd() / 'static' / 'safe-granule-orbit-list.txt')
+    else:
+        raise ValueError('ERROR :: safe-granule-orbit-list.txt cannot be found')
+
+    # create new col that matches the granule-orbit syntax
+    df['gran-orb'] = df['granule-ref'] + '_' + df['orbit-ref']
+
+    filtered_df = pd.merge(df,df_safe_list)
+
+    if len(filtered_df) > 0:
+        return_df = filtered_df.sort_values("ARCSI_CLOUD_COVER").groupby(["granule-ref"], as_index=False).first()        
+    else:
+        raise ValueError('ERROR : You have selected find_lowest_cloud=True BUT your search criteria is too narrow, spatially or temporally and did not match any granule references in "./static/safe-granule-orbit-list.txt". Suggest widening your search')
+
+    return return_df
+    
 
 def ignore_split_granules(df):
+    """
+    eods query "special" keyword function
+    + takes the input dataframe and removes all SPLIT granules.
+    + one issue that has to be overcome, if a granule is split by ESA into two:
+        then one of the components has the word 'SPLIT' added to the title,
+        the other component granule of the split 'pair' does not.
+        therefore, this function finds the SPLIT title, then finds the second component
+        and removes BOTH component granules from the dataframe
+    + returns a new dataframe
+    """    
 
-    new_df = df[df["alternate"].str.contains("SPLIT") == False]
+    if len(df[df['title'].str.contains('SPLIT')]) > 0:
 
-    return new_df
+        print(datetime.utcnow().isoformat() + ' :: INFO. Split Granules found in query results ... removing')
 
+        # create a title substring which can be matched against a split list
+        df['title_stub'] = df['title'].str.split('_T', expand=True).loc[:,0] + '_' + df['granule-ref'].str[:6]
+
+        # create a Series object for that only contains the title 'sub string' 
+        s = df[df["title"].str.contains("SPLIT")].title.str.split('SPLIT1',expand=True).loc[:,0]
+
+        # select rows from main dataframe where records DO NOT MATCH (~ = syntax) the 'split' series of title stub strings
+        filtered_out_split = df[~df.title_stub.isin(s)]
+
+        return filtered_out_split
+
+    else:
+        print(datetime.utcnow().isoformat() + ' :: INFO. No split granules found in query results')
+        
+        return df
 
 def query_catalog(conn, **kwargs):
     """Transform vectors from source to target coordinate reference system.
@@ -253,7 +656,7 @@ def query_catalog(conn, **kwargs):
             return output_list, df
 
         else:
-            print(datetime.utcnow().isoformat() + ' :: RESPONSE STATUS = ' + str(response.status_code) + ' (NOT SUCCESSFUL)' + str(response.status_code) + ' :: QUERY URL = ' + response.url)
+            raise ValueError(datetime.utcnow().isoformat() + ' :: RESPONSE STATUS = ' + str(response.status_code) + ' (NOT SUCCESSFUL)' + str(response.status_code) + ' :: QUERY URL = ' + response.url)
 
     except requests.exceptions.RequestException as e:
         print('\n' + datetime.utcnow().isoformat() + ' :: ERROR, an Exception was raised, no list returned')
@@ -284,372 +687,7 @@ def mod_the_xml(item):
                 file_data = file_data.replace(key, value)
     
     return file_data
-
-def submit_wps_request(request_config, payload):
-    """
-    function submit the wps POST request
-    """
-
-    try:
-        response = requests.post(
-            request_config['wps_server'],
-            params={'access_token':request_config['access_token'],'SERVICE':'WPS','VERSION':'1.0.0','REQUEST':'EXECUTE'},
-            data=payload,
-            headers=request_config['headers'],
-            verify=request_config['verify'])    
-
-        if response.status_code == 200:
-            if not response.text.find('ExceptionReport') > 0:
-                execution_id = response.text.split('executionId=')[1].split('&')[0]        
-                print('\n' + datetime.utcnow().isoformat() + ' :: WPS job ' + execution_id + ' was successfully submitted to ' + response.url)
-                print('\n' + datetime.utcnow().isoformat() + ' :: ' + str(response.content))
-                return execution_id
-            else:
-                raise ValueError(datetime.utcnow().isoformat() + ' :: ERROR :: WPS server responded with the following exception :: Response=' + str(response.content))
-                return
-        else:
-            raise ValueError(datetime.utcnow().isoformat() + ' :: ERORR :: WPS submission request response is not 200 (Success) :: Status=' + str(response.status_code))
-            return
-
-    except requests.exceptions.RequestException as err:
-        raise ValueError(datetime.utcnow().isoformat() + ' :: ERORR :: WPS submission raised a connection ERROR :: Response = ' + str(err))
-        return
-
-def query_single_xml_page(page_counter, request_config):
-    """
-    function to query single page of xml using page_counter argument
-    this increments by 10 as there are a maximum of 10 wps records per xml page
-    """
-    try:
-        response = requests.get(
-            request_config['wps_server'],
-            params={'access_token':request_config['access_token'],'SERVICE':'WPS','VERSION':'1.0.0','REQUEST':'GetExecutions','startIndex':str(page_counter)},
-            # params={'access_token':request_config['access_token'],'SERVICE':'WPS','VERSION':'1.0.0','REQUEST':'GetExecutiASDFASDFASDFons','startIndex':str(page_counter)},
-            headers=request_config['headers'],
-            verify=request_config['verify'],
-            timeout=180
-            )
-    except requests.exceptions.RequestException as err:
-        print('\n\t' + datetime.utcnow().isoformat() + ' :: ERORR :: Could not POLL the WPS server. It is possibly offline, try your submission again :: Response = ' + str(err))
-        return -1
-
-    # parse the xml to an ordered dict using 3rd party imported module xmltodict
-    d = xmltodict.parse(response.content)
-
-    # create a list of wps jobs and
-    # deal with a single entry per XML document which yields a different structure to the ordered dict
-    if isinstance(d['wps:GetExecutionsResponse']['wps:ExecuteResponse'], dict):
-        jobs_list = []
-        jobs_list.append(d['wps:GetExecutionsResponse']['wps:ExecuteResponse'])
-    elif isinstance(d['wps:GetExecutionsResponse']['wps:ExecuteResponse'],list):
-        jobs_list = [value for value in d['wps:GetExecutionsResponse']['wps:ExecuteResponse']]
-        
-    top_level_keys = list(d['wps:GetExecutionsResponse'].keys())
     
-    job_count_for_user = d['wps:GetExecutionsResponse']['@count']    
-
-    return jobs_list, page_counter, top_level_keys, job_count_for_user
-
-def query_all_xml_pages(check_time, request_config):
-    """
-    function to handle querying multiple pages of xml status jobs
-    """
-    
-    start_index = 0
-    matching_of_dicts = []
-    for page_counter in range(0,1000,10):
-                
-        jobs_list, page_counter, top_level_keys, job_count_for_user = query_single_xml_page(page_counter, request_config)
-
-        # add this to a master list
-        matching_of_dicts.append(jobs_list)
-
-        # if there is no 'next' attribute, then you're on the last xml page so break out the loop
-        if not any('@next' == key for key in top_level_keys):
-            break
-
-    num_of_xml_pages = int(page_counter / 10) + 1
-    duration_to_parse_xml_sec = round((datetime.utcnow() - check_time).total_seconds(),0)
-            
-    try:
-        response_list = [item['wps:Status'] for sublist in matching_of_dicts for item in sublist]
-        return response_list, num_of_xml_pages, duration_to_parse_xml_sec, job_count_for_user
-    
-    except AppError as error:
-        print(error)
-
-def parse_wps_responses_to_pandas_dfs(response_list, check_time, frames, log_file_name, request_config, execution_dict):
-    """
-    """
-    
-    # parse dict to pandas dataframe and set the index
-    df_temp = pd.DataFrame.from_dict(response_list)
-    df = df_temp.set_index('wps:JobID')
-
-    # filter df on current job_ids
-    # filter_df  = df[df.index.isin(execution_dict.keys())]
-    filter_df = df.loc[df.loc[:].index.isin(execution_dict.keys())]
-
-    # add "check time" as column
-    filter_df.loc[:,'check_time'] = check_time.isoformat()
-
-    # append on some extra info to the dataframe using the index
-    for index, row in filter_df.iterrows():
-        filter_df.loc[index,'layer_name'] = execution_dict[index]['layer_name']
-        filter_df.loc[index,'dl_url'] = request_config['wps_server'] + '?access_token=' + request_config['access_token'] + '&SERVICE=WPS&VERSION=1.0.0&REQUEST=GetExecutionResult&EXECUTIONID='  + index + '&outputId=result.' + execution_dict[index]['source_dict']['xml_config']['template_mimetype'].split('/')[-1] + '&mimetype=' + execution_dict[index]['source_dict']['xml_config']['template_mimetype']
-        filter_df.loc[index,'dl_boolan'] = execution_dict[index]['source_dict']['dl_bool']
-        filter_df.loc[index,'mimetype'] = execution_dict[index]['source_dict']['xml_config']['template_mimetype']
-        
-    # sort out the indices and concatenate dataframes together and output to csv
-    filter_df.reset_index(inplace=True)
-    filter_df.set_index(['wps:JobID','check_time'],inplace=True)
-    frames.append(filter_df)
-    rolling_merged_df = pd.concat(frames)
-    rolling_merged_df.to_csv(log_file_name)
-    
-    return filter_df, rolling_merged_df, frames
-
-def process_wps_downloaded_files(dl_path, filename_stub, file_extension):
-    """
-    function to rename downloaded file if TIFF or extract from zip 
-    """
-    
-    input_path = Path(dl_path / str(filename_stub + file_extension))
-        
-    # if tif, skip extraction and rename the tif
-    if file_extension == '.tif' or file_extension == '.tiff':    
-        dl_file_renamed = Path(input_path).rename(dl_path / str(filename_stub + '.tif'))
-        print(datetime.utcnow().isoformat() + ' :: FILE=' + str(dl_file_renamed) + ' :: RENAME COMPLETE')
-        return dl_file_renamed
-
-    elif file_extension == '.zip':
-        zip_ref = ZipFile(input_path, 'r')
-        zip_ref.extractall(dl_path)
-        zip_list = zip_ref.filelist
-        zip_ref.close()
-        
-        # delete the source zip
-        if input_path.exists():
-            input_path.unlink()
-        
-        # loop through zip contents
-        for f in zip_list:
-        
-            f_path = Path(dl_path / f.filename)
-        
-            # if zip, call function again to extract
-            if f_path.suffix == '.zip':            
-                print(datetime.utcnow().isoformat() + ' :: FILE=' + str(f_path) + ' :: RUN EXTRACT ARCHIVE AGAIN')
-                dl_file_renamed = process_wps_downloaded_files(dl_path, f_path.stem, f_path.suffix)
-
-            # if tif rename tiff from uuid to actual filename
-            elif f_path.suffix == ".tif" or f_path.suffix == ".tiff":
-                dl_file_renamed = Path(f_path).rename(dl_path / str(filename_stub + '.tif'))
-                print(datetime.utcnow().isoformat() + ' :: FILE=' + str(dl_file_renamed) + ' :: RENAME TIFF COMPLETE')
-                
-            # if something else, like a shape file, this should have the original name
-            else:
-                print(datetime.utcnow().isoformat() + ' :: FILE=' + str(f_path) + ' :: NO PROCESSING ON THIS FILETYPE REQUIRED')
-                dl_file_renamed = f_path
-            
-        return dl_file_renamed
-        
-    else:
-        raise ValueError("ERROR - some unknown file has been given:", f)
-        
-def download_wps_result(index, row, path_output, request_config):
-    """
-    function to get a wps result if the response is SUCCEEDED AND download is set to True in the config
-    """
-    
-    print('\n' + datetime.utcnow().isoformat() + ' :: DOWNLOAD START :: URL = ' + row['dl_url'])
-
-    try:
-        # download the wps result
-        response = requests.get(
-            row['dl_url'],
-            headers=request_config['headers'],
-            verify=request_config['verify'])
-
-        print(datetime.utcnow().isoformat() + ' :: DOWNLOAD COMPLETE')
-
-        # write the download to a file
-        file_extension = '.' + row['mimetype'].split('/')[1]
-        dl_path = path_output / str(row['wps:Identifier'].split(':')[0] + row['wps:Identifier'].split(':')[1] + '-' + index[0])
-        dl_path.mkdir(parents=True, exist_ok=True)
-        filename_stub = row['layer_name'].split(':')[-1]
-        local_file_name = Path(dl_path / str(filename_stub + file_extension))
-        print(datetime.utcnow().isoformat() + ' :: FILE WRITE START :: FILE = ' + str(local_file_name))
-        with open(local_file_name, 'wb') as f:
-            f.write(response.content);
-            f.close();        
-        print(datetime.utcnow().isoformat() + ' :: FILE WRITE COMPLETE')
-        print(datetime.utcnow().isoformat() + ' :: EXTRACT ARCHIVE FILE STARTED')
-
-        # rename download and extract if it is a zip
-        download_path = process_wps_downloaded_files(dl_path, filename_stub, file_extension)
-
-        return download_path
-
-    except requests.exceptions.RequestException as err:
-        print('\n' + datetime.utcnow().isoformat() + ' :: ERROR, an Exception was raised, no list returned :: reponse is :' + str(err))
-        return
-        
-def run_wps(conn, config_wpsprocess, **kwargs):
-    """
-    primary function to orchestrate running the wps job from submission to download (if required)
-
-    Parameters:
-    -----------
-        conn: dict,
-            Connection parameters
-            Example: conn = {'domain': 'https://earthobs.defra.gov.uk',
-                             'username': '<insert-username>',
-                             'access_token': '<insert-access-token>'}
-
-        config_wpsprocess: list or dict,
-            list of dictionaries for individual wps submission requests.
-            users can generate a list of multiple dictionaries, one dict per wps job
-            with "xml_config", this is dict of variables that templated into the xml
-            payload for the WPS request submission            
-            Example:
-                config_wpsprocess = [{'template_xml':'gsdownload_template.xml',
-                                    'xml_config':{
-                                        'template_layer_name':lyr,
-                                        'template_outputformat':'image/tiff',
-                                        'template_mimetype':'application/zip'},
-                                    'dl_bool':True
-                                    }]
-
-        output_dir: str or Pathlib object, optional,
-            user specified output directory
-
-        verify: str, optional:
-            add custom path to any organisation certificate stores that the
-            environment needs
-            Default Value:
-                * True
-            Possible Value:
-                * 'dir/dir/cert.file'    
-
-    Returns:
-    -----------
-        list_download_paths: list,
-            list of pathlib objects for downloaded output for further reuse
-
-    """
-
-    # validate that incoming wps config 
-    try:
-        if isinstance(config_wpsprocess, dict) and config_wpsprocess:
-            new_list = []
-            new_list.append(config_wpsprocess)
-            config_wpsprocess = new_list
-        elif len(config_wpsprocess) == 0:
-            raise ValueError('\n\t ERROR :: the config_wpsprocess arg is empty, check your config_wpsprocess arg')    
-    except ValueError as err:
-        print(err)
-        return -1
-
-    # set output path if not specified
-    if 'output_dir' not in kwargs:
-        kwargs['output_dir']=Path.cwd()
-
-    if 'verify' not in kwargs:
-        kwargs['verify'] = True
-
-    # INITIALISE VARIABLES
-    path_output = make_output_dir(kwargs['output_dir'])
-
-    request_config = {
-        'wps_server':conn['domain'] + '/geoserver/ows',
-        'access_token':conn['access_token'],
-        'headers':{'Content-type': 'application/xml','User-Agent': 'python'},
-        'verify':kwargs['verify']
-    }
-
-    poll_frequency_sec = 60
-    execution_dict={}
-    frames = []
-
-    # STEP 1. SUBMIT the WPS request(s) by loop through the wps request INPUT dictionary   
-    for item in config_wpsprocess:
-
-        lyr = item['xml_config']['template_layer_name']
-        print('\n' + datetime.utcnow().isoformat() + ' :: WPS SUNMISSION :: lyr=' + lyr + ', download=' + str(item['dl_bool']))
-
-        try:
-            modded_xml = mod_the_xml(item)
-            execution_id = submit_wps_request(request_config, modded_xml)
-        except ValueError as error:
-            print(error)
-            return
-
-        execution_dict.update({execution_id :{'layer_name':lyr,'source_dict':item}})                
-
-    print('\n' + datetime.utcnow().isoformat() + ' :: WPS SUBNMISSION :: A TOTAL OF ' + str(len(execution_dict)) +  ' REQUESTS WERE SUBMITTED')
-    print(datetime.utcnow().isoformat() + ' :: WPS SUBNMISSION :: THE EXECUTION IDS =' + str(execution_dict.keys()))
-    print(datetime.utcnow().isoformat() + ' :: WPS SUBNMISSION :: WPS GETEXCUTIONS URL IS ' + request_config['wps_server'] + '?SERVICE=WPS&VERSION=1.0.0&REQUEST=GetExecutions&access_token=' + request_config['access_token'])
-
-    # create logging file directory    
-    log_file_name = path_output / 'wps-running-log.csv'
-
-    # STEP 2. POLL THE WPS GETEXECUTIONS PAGE for 1 hour until all jobs status is NOT 'STATUS=RUNNING' and break the loop
-    for i in range(1,3600):
-
-        check_time = datetime.utcnow()
-        if i == 1:
-            print('\n\n' + datetime.utcnow().isoformat() + ' :: POLLING WPS JOB STATUS LOGGING TO THIS FILE = ' + str(log_file_name))
-        print('\n' + datetime.utcnow().isoformat() + ' :: POLLING WPS JOB STATUS TRY #' + format(i, '03'))
-
-        # call functions to parse xml to a clean response list ready for pandas
-        response_list, num_of_xml_pages, duration_to_parse_xml_sec, job_count_for_user = query_all_xml_pages(check_time, request_config)
-        
-        print(datetime.utcnow().isoformat() + ' :: POLLING WPS JOB STATUS TRY #' + format(i, '03') + ' :: RESPONSE RECEIVED in ' + str(duration_to_parse_xml_sec) + 's, wps jobs=' + str(job_count_for_user) + ', xml pages=' + str(num_of_xml_pages))
-    
-        # parse response list to pandas dfs
-        filter_df, rolling_merged_df, frames = parse_wps_responses_to_pandas_dfs(
-            response_list,
-            check_time,
-            frames,
-            log_file_name,
-            request_config,
-            execution_dict)
-
-        # if NO running processes, then break, otherwise loop again
-        if not any(filter_df['wps:Status'] == 'RUNNING'):
-            break
-        print(datetime.utcnow().isoformat() + ' :: POLLING WPS JOB STATUS TRY #' + format(i, '03') + ' :: Jobs are still "STATUS=RUNNING"...script will poll again in ' + str(poll_frequency_sec) + 'sec time ...')
-
-        time.sleep(poll_frequency_sec)
-
-    # export summary wps jobs to CSV
-    sumdf = rolling_merged_df.reset_index()
-    grouped = sumdf.groupby(['wps:JobID','wps:Status']).first()
-    grouped.to_csv(path_output / 'wps-summary-log.csv')
-    
-    print('\n' + datetime.utcnow().isoformat() + ' :: POLLING WPS JOB STATUS TRY #' + format(i, '03') + ' :: ALL WPS Jobs are either SUCCEEDED or FAILED, moving on to downloading the results')
-    
-    # STEP 3. loop through final dataframe and call the download function
-    if any(filter_df['dl_boolan'].tolist()):
-        list_download_paths = []
-    
-        for index, row in filter_df.iterrows():
-            if row['wps:Status'] == 'SUCCEEDED' and row['dl_boolan']:
-                download_path = download_wps_result(index, row, path_output, request_config)
-                list_download_paths.append(download_path)
-            elif row['wps:Status'] == 'FAILED':
-                print(datetime.utcnow().isoformat() + ' skipping downloading for JobID=' + index[0] + ' :: JobStatus=FAILED' + ' :: WPS ERROR MESSAGE ' + str(row['wps:ProcessFailed']))
-                print(datetime.utcnow().isoformat() + ' check the local log file for more info')
-            else:
-                print(datetime.utcnow().isoformat() + ' some other issue encountered, check the local log file for more info')
-        return list_download_paths
-    else:
-        print(datetime.utcnow().isoformat() + ' :: NO WPS Jobs set to download, skipping downloading')
-        return
-        
-    print('\n\n' + datetime.utcnow().isoformat() + ' :: #### WPS PROCESSING COMPLETE')
-
 def get_bbox_corners_from_wkt(csw_wkt_geometry,epsg):
     """
     function to return a bbox coordinate pair representing lower_left and upper_right of an EODS layer's bounds
@@ -668,4 +706,3 @@ def get_bbox_corners_from_wkt(csw_wkt_geometry,epsg):
     ur_proj_pt = transform(project, ur_wgs84_pt)
 
     return ll_proj_pt, ur_proj_pt
-
