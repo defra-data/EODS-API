@@ -424,8 +424,7 @@ def find_minimum_cloud_list(df):
     else:
         raise ValueError('ERROR : You have selected find_lowest_cloud=True BUT your search criteria is too narrow, spatially or temporally and did not match any granule references in "./static/safe-granule-orbit-list.txt". Suggest widening your search')
 
-    return return_df
-    
+    return return_df  
 
 def ignore_split_granules(df):
     """
@@ -706,3 +705,154 @@ def get_bbox_corners_from_wkt(csw_wkt_geometry,epsg):
     ur_proj_pt = transform(project, ur_wgs84_pt)
 
     return ll_proj_pt, ur_proj_pt
+
+def post_to_layer_group_api(conn, url, the_json):
+    """
+    post content layergroup endpoint
+
+    Parameters
+    ----------
+    conn : dict,
+        Connection parameters
+        Example: conn = {'domain': 'https://earthobs.defra.gov.uk',
+                            'username': '<insert-username>',
+                            'access_token': '<insert-access-token>'}
+
+    url : str
+        url of which layer group to access
+
+    the_json : dict
+        the dictionary that gets parsed to the 'json' parameter of the POST request
+
+    Returns
+    -------
+    json response from layergroup api
+    
+    """    
+
+    headers={'Content-type': 'application/json','User-Agent': 'eods scripting'}
+
+    params = {'username':conn['username'],'api_key':conn['access_token']}
+
+    try:
+        # post the the EODS layer group api endpoint
+        response = requests.post(
+            url,
+            params=params,
+            headers=headers,
+            json=the_json,
+            )
+
+        # raise an error if the response status is not successful
+        print(response.raise_for_status()) 
+
+        # if response is successful, print the response text
+        print(f'\n## Response posting to {response.url} was successful ...')
+        print(f'\n## Response text : \n{response.text}')
+        
+        return json.loads(response.content)
+        
+    except Exception as error:
+        print('Error caught as exception')
+        print(error)
+
+def create_layer_group(conn, list_of_layers, name, abstract=None):
+    """
+    create a layer group 
+
+    Parameters
+    ----------
+    conn : dict,
+        Connection parameters
+        Example: conn = {'domain': 'https://earthobs.defra.gov.uk',
+                            'username': '<insert-username>',
+                            'access_token': '<insert-access-token>'}
+
+    list_of_layers : list
+        list of layers
+        Example: list of layers = [
+            "geonode:S2B_20200404_lat50lon503_T30UUA_ORB037_utm30n_osgb_vmsk_sharp_rad_srefdem_stdsref",
+            "geonode:S2B_20200404_lat50lon363_T30UVA_ORB037_utm30n_osgb_vmsk_sharp_rad_srefdem_stdsref"
+        ]
+
+    name : str
+        specify the name of the layer group
+
+    abstract : str, optional
+        specify the abstract of the layer group
+
+    Returns
+    -------
+    json response from layergroup api
+    
+    """
+
+    # validation checks
+    if not isinstance(list_of_layers, list):
+        raise TypeError('ERROR. list_of_layers is not a list, aborting ...')
+
+    if not isinstance(name, str):
+        raise TypeError('ERROR. layer group name is not a string, aborting ...')
+
+    if len(list_of_layers) == 0 :
+        raise ValueError('ERROR. list_of_layers is empty, aborting ...')
+
+    if len(name) == 0 :
+        raise ValueError('ERROR. layer group name string is empty, aborting ...')
+
+    url = f'{conn["domain"]}/api/layer_groups/'
+   
+    the_json = {'name': name, 'abstract': abstract, 'layers': list_of_layers}
+    
+    response_json = post_to_layer_group_api(conn, url, the_json)
+    
+    return response_json
+    
+def modify_layer_group(conn, list_of_layers, layergroup_id, abstract=None):
+    """
+    modify a layer group, referencing the layergroup ID and list of layers
+
+    Parameters
+    ----------
+    conn : dict,
+        Connection parameters
+        Example: conn = {'domain': 'https://earthobs.defra.gov.uk',
+                            'username': '<insert-username>',
+                            'access_token': '<insert-access-token>'}
+
+    list_of_layers : list
+        list of layers
+        Example: list of layers = [
+            "geonode:S2B_20200404_lat50lon503_T30UUA_ORB037_utm30n_osgb_vmsk_sharp_rad_srefdem_stdsref",
+            "geonode:S2B_20200404_lat50lon363_T30UVA_ORB037_utm30n_osgb_vmsk_sharp_rad_srefdem_stdsref"
+        ]
+
+    layergroup_id : integer
+        EODS ID of the layer group, eg from: https://earthobs.defra.gov.uk/layer_groups/<layergroup_id>
+
+    abstract : str, optional
+        specify the modified abstract of the layer group, to overwrite if required
+
+    Returns
+    -------
+    json response from layergroup api
+    
+    """
+
+    # validation checks
+    if not isinstance(list_of_layers, list):
+        raise TypeError('ERROR. list_of_layers is not a list, aborting ...')
+
+    if not isinstance(layergroup_id, int):
+        raise TypeError('ERROR. layer group ID is not an integer, aborting ...')
+
+    if len(list_of_layers) == 0 :
+        raise ValueError('ERROR. list_of_layers is empty, aborting ...')
+    
+    url = f'{conn["domain"]}/api/layer_groups/{layergroup_id}/'
+    
+    the_json = {'abstract':abstract, 'layers':list_of_layers}
+    
+    response_json = post_to_layer_group_api(conn, url, the_json)
+    
+    return response_json

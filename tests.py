@@ -226,6 +226,51 @@ if __name__ == "__main__":
 
         eodslib.output_log(list_of_results)    
 
+    if args.test == 7:
+
+        print('\n\t INFO :: TEST7 :: QUERY EODS + create a layer group')
+
+        eods_params = {
+            'output_dir':output_dir,
+            'start_date':'2020-04-01',
+            'end_date':'2020-05-01',
+            'sat_id':2,
+            'title':'ORB037',
+            'cloud_min':0,
+            'cloud_max':100,
+            'find_least_cloud':True,
+            'ignore_split_granules':True,
+            }
+
+        list_of_layers, df = eodslib.query_catalog(conn, **eods_params)
+
+        response_json = eodslib.create_layer_group(conn, list_of_layers, 'test_no6_create_lg', abstract='test no7 modify layer group')
+
+    if args.test == 8:
+
+        print("""
+        
+        INFO :: TEST8 :: QUERY EODS + modify a layer group to contain""")
+
+        eods_params = {
+            'output_dir':output_dir,
+            'start_date':'2020-04-01',
+            'end_date':'2020-05-01',
+            'sat_id':2,
+            'title':'ORB037',
+            'cloud_min':0,
+            'cloud_max':100,
+            'find_least_cloud':True,
+            'ignore_split_granules':True,
+            'limit': 2,
+            }
+
+        list_of_layers, df = eodslib.query_catalog(conn, **eods_params)
+
+        response_json = eodslib.modify_layer_group(conn, list_of_layers, 18127, abstract='test no8 modify layer group')
+
+
     time_diff_mins = round((datetime.utcnow() - start_time).total_seconds() / 60,2)
     print('\n\t### Total processing time (mins) = ' + str(time_diff_mins))
     print('\t### Script finished')
+
