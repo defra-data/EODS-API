@@ -346,7 +346,7 @@ def process_wps_downloaded_files(execution_dict):
                 if f_path.suffix.lower() == ".sld":
                     f_path.unlink()
                 else:
-                    Path(f_path).rename(source_file_to_extract.parent.parent / str(execution_dict['filename_stub'] + f_path.suffix.lower()))
+                    Path(f_path).replace(source_file_to_extract.parent.parent / str(execution_dict['filename_stub'] + f_path.suffix.lower()))
 
         else:
             Path(source_file_to_extract).rename(source_file_to_extract.parent.parent / str(execution_dict['filename_stub'] + source_file_to_extract.suffix.lower()))
