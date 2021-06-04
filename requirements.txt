@@ -1,0 +1,9 @@
+pandas==1.2.4
+matplotlib==3.4.1
+notebook==6.3.0
+rasterio==1.2.3
+requests==2.25.1
+Shapely==1.7.1
+pyproj==3.0.1
+xmltodict==0.12.0
+python-dotenv==0.17.1

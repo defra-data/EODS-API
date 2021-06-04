@@ -124,6 +124,9 @@ dmypy.json
 .pyre/
 
 # custom ignores
-output/
+output/*
 .vscode/
+archive/
 data/
+scratch*.py
+.env

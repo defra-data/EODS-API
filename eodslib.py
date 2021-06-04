@@ -3,14 +3,8 @@ module of library functions for programatic interaction with Defra's Earth
 Observation Data Service (EODS)
 
     AUTHOR          : Sam Franklin, CGI
-    LAST UPDATED    : 2020-11-16
+    LAST UPDATED    : 2021-04-20
 """
-
-# module-wide TODOs:
-# TODO: update doc strings on all functions
-# TODO: rename functions and reorder
-# TODO: review imports and initial settings
-# TODO: add new eods query function to use the safe granule list to filter out edge granules
 
 import os
 import sys
@@ -29,7 +23,6 @@ import shapely
 import shapely.wkt
 from shapely.ops import transform
 import pyproj
-import config
 import shutil
 os.environ['PROJ_NETWORK'] = 'OFF'
 
