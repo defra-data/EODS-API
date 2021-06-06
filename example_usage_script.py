@@ -3,20 +3,30 @@
 import eodslib
 from datetime import datetime
 from pathlib import Path
-import config
+from dotenv import load_dotenv
+import os
 
 if __name__ == "__main__":
 
     start_time = datetime.utcnow()
 
-    # set these variables in your config.py
-    output_dir = config.output_dir
-    conn = config.conn
+    # USER MUST EDIT THE ENVIRONMENT FILE REFERENCED BELOW, OR CREATE THEIR OWN FILE AND REFERENCE IT
+    load_dotenv()
+
+    # set configuration based on contents of the ENVIRONMENT FILE.
+    conn = {
+        'domain': os.getenv("HOST"),
+        'username': os.getenv("API_USER"),
+        'access_token': os.getenv("API_TOKEN"),
+    }
+
+    # use default path to local "output" directory
+    output_dir = eodslib.make_output_dir(Path.cwd() / 'output')
 
     # specify a particular ARD to download using 'title' keyword
     eods_params = {
         'output_dir':output_dir,
-        'title':'S2A_20200506_lat50lon223_T30UWA_ORB137_utm30n_osgb_vmsk_sharp_rad_srefdem_stdsref',
+        'title':'S2B_20200424_lat55lon215_T30UWF_ORB037_utm30n_osgb_vmsk_sharp_rad_srefdem_stdsref',
         }
 
     list_of_layers, df = eodslib.query_catalog(conn, **eods_params)

@@ -3,7 +3,8 @@
 import eodslib
 from datetime import datetime
 from pathlib import Path
-import config
+from dotenv import load_dotenv
+import os
 import argparse
 
 if __name__ == "__main__":
@@ -13,9 +14,17 @@ if __name__ == "__main__":
     args = app_parser.parse_args()
     start_time = datetime.utcnow()
 
-    # configure the "conn" dictionary in the config.py file
-    output_dir = config.output_dir
-    conn = config.conn
+    # USER MUST EDIT THE ENVIRONMENT FILE REFERENCED BELOW, OR CREATE THEIR OWN FILE AND REFERENCE IT
+    load_dotenv()
+    
+    # set configuration based on contents of the ENVIRONMENT FILE.
+    conn = {
+        'domain': os.getenv("HOST"),
+        'username': os.getenv("API_USER"),
+        'access_token': os.getenv("API_TOKEN"),
+    }
+
+    output_dir = eodslib.make_output_dir(Path.cwd() / 'output')
 
     if args.test == 1:
 
