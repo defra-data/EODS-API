@@ -24,6 +24,7 @@ import shapely.wkt
 from shapely.ops import transform
 import pyproj
 import shutil
+import numpy as np
 os.environ['PROJ_NETWORK'] = 'OFF'
 
 def run_wps(conn, config_wpsprocess, **kwargs):
@@ -399,7 +400,8 @@ def find_minimum_cloud_list(df):
     # for this kwarg case, this can return split granules where SPLIT isn't in the title
     # which could generate a mosaic that has split granules and therefore 'holes' in the coverage
     # so run ignore_split_granules function in call cases where 'find_least_cloud=True'
-    df = ignore_split_granules(df)
+    
+    no_split_df = ignore_split_granules(df)
 
     # import safe granule-orb list
     if Path(Path.cwd() / 'static' / 'safe-granule-orbit-list.txt').exists():
@@ -408,12 +410,22 @@ def find_minimum_cloud_list(df):
         raise ValueError('ERROR :: safe-granule-orbit-list.txt cannot be found')
 
     # create new col that matches the granule-orbit syntax
-    df['gran-orb'] = df['granule-ref'] + '_' + df['orbit-ref']
+    no_split_df['gran-orb'] = no_split_df['granule-ref'].str[:6] + '_' + no_split_df['orbit-ref']
+    no_split_df['granule-stub'] = no_split_df['granule-ref'].str[:6]
 
-    filtered_df = pd.merge(df,df_safe_list)
+    df['gran-orb'] = df['granule-ref'].str[:6] + '_' + df['orbit-ref']
+    df['granule-stub'] = df['granule-ref'].str[:6]
 
-    if len(filtered_df) > 0:
-        return_df = filtered_df.sort_values("ARCSI_CLOUD_COVER").groupby(["granule-ref"], as_index=False).first()        
+    safe_df = pd.merge(no_split_df, df_safe_list)
+
+    if len(safe_df) > 0:
+        return_df = safe_df.sort_values("split_cloud_cover").groupby(["granule-stub"], as_index=False).nth(0).sort_values("granule-stub")
+
+        matching_split_series = return_df[return_df['split_granule.name'].notna()]['split_granule.name']
+        matching_split_df = df[df['alternate'].isin(matching_split_series)]
+
+        return_df = pd.concat([return_df, matching_split_df], ignore_index=True)
+
     else:
         raise ValueError('ERROR : You have selected find_lowest_cloud=True BUT your search criteria is too narrow, spatially or temporally and did not match any granule references in "./static/safe-granule-orbit-list.txt". Suggest widening your search')
 
@@ -438,11 +450,13 @@ def ignore_split_granules(df):
         # create a title substring which can be matched against a split list
         df['title_stub'] = df['title'].str.split('_T', expand=True).loc[:,0] + '_' + df['granule-ref'].str[:6]
 
-        # create a Series object for that only contains the title 'sub string' 
+        """# create a Series object for that only contains the title 'sub string' 
         s = df[df["title"].str.contains("SPLIT")].title.str.split('SPLIT1',expand=True).loc[:,0]
 
         # select rows from main dataframe where records DO NOT MATCH (~ = syntax) the 'split' series of title stub strings
-        filtered_out_split = df[~df.title_stub.isin(s)]
+        filtered_out_split = df[~df.title_stub.isin(s)]"""
+
+        filtered_out_split = df[~df['title'].str.contains("SPLIT")]
 
         return filtered_out_split
 
@@ -621,19 +635,38 @@ def query_catalog(conn, **kwargs):
                         df['orbit-ref'] = df['title'].str.split('_',n=5).str[-2]
                         df['ARCSI_CLOUD_COVER'] =df['supplemental_information'].str.split(n=6).str[5]
 
-                if 'ignore_split_granules' in kwargs:
-                    if kwargs['ignore_split_granules']:
-                        df = ignore_split_granules(df)
+                if 'find_least_cloud' in kwargs and kwargs['sat_id'] == 2:
+                    if kwargs['find_least_cloud']:
+                        temp_df = df[df['split_granule.name'].notna()][['alternate', 'ARCSI_CLOUD_COVER']].copy()
+                        temp_df.rename(columns={"alternate": "split_granule.name", "ARCSI_CLOUD_COVER": "split_ARCSI_CLOUD_COVER"}, inplace=True)
+                        merged_df = df[df['split_granule.name'].notna()].reset_index().merge(temp_df, how='outer', on='split_granule.name').set_index('index')
+                        df['split_ARCSI_CLOUD_COVER'] = np.nan
+                        df.loc[df['split_granule.name'].notna(), 'split_ARCSI_CLOUD_COVER'] = merged_df['split_ARCSI_CLOUD_COVER']
 
-                if 'find_least_cloud' in kwargs and kwargs['sat_id'] == 2 and kwargs['find_least_cloud']:
-                    df = find_minimum_cloud_list(df)
+                        df.loc[df['id']==9281, 'ARCSI_CLOUD_COVER'] = '0.2'
+                        df.loc[df['id']==9117, 'ARCSI_CLOUD_COVER'] = '0.2'
+
+                        split_cloud_cover = np.where(df['split_granule.name'].notna(), ((df['ARCSI_CLOUD_COVER'].astype(
+                            float) + df['split_ARCSI_CLOUD_COVER'].astype(
+                            float).astype(float))/2).astype(str), df['ARCSI_CLOUD_COVER'])
+
+                        df['split_cloud_cover'] = split_cloud_cover
+
+                        filtered_df = find_minimum_cloud_list(df)
+                elif 'ignore_split_granules' in kwargs:
+                    if kwargs['ignore_split_granules']:
+                        filtered_df = ignore_split_granules(df)
+                    else:
+                        filtered_df = df.copy()
+                else:
+                    filtered_df = df.copy()
 
                 # make output paths
                 path_output = make_output_dir(kwargs['output_dir'])
                 log_file_name = path_output / 'eods-query-all-results.csv'
-                df.to_csv(log_file_name)                    
+                filtered_df.to_csv(log_file_name)                    
             
-                output_list = df['alternate'].tolist()
+                output_list = filtered_df['alternate'].tolist()
 
                 print('\nMatching Layers:\n')
                 for item in output_list:
@@ -642,10 +675,10 @@ def query_catalog(conn, **kwargs):
 
             else:
                 output_list = []
-                df = None
+                filtered_df = None
                 print('\n' + datetime.utcnow().isoformat() + ' :: QUERY WAS ACCEPTED BUT PARAMETERS USED RETURNED ZERO MATCHING RECORDS, TRY A DIFFERENT SET OF PARAMETERS')
 
-            return output_list, df
+            return output_list, filtered_df
 
         else:
             raise ValueError(datetime.utcnow().isoformat() + ' :: RESPONSE STATUS = ' + str(response.status_code) + ' (NOT SUCCESSFUL)' + str(response.status_code) + ' :: QUERY URL = ' + response.url)
