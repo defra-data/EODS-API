@@ -389,19 +389,15 @@ def make_output_dir(path_output):
 def find_minimum_cloud_list(df):
     """
     eods query "special" keyword function
-    + runs ignore split granules function to filter out split granules
     + cross checks the dataframe with a static csv file of 'safe' granule list
     + then groups by the unique granule-reference
     + sorts by cloud cover and takes the lowest cloud value per granule
     + returns a new dataframe
     """
-
-    # handle the case where kwargs are {'find_least_cloud':True,'ignore_split_granules':False,}
-    # for this kwarg case, this can return split granules where SPLIT isn't in the title
-    # which could generate a mosaic that has split granules and therefore 'holes' in the coverage
-    # so run ignore_split_granules function in call cases where 'find_least_cloud=True'
     
-    no_split_df = ignore_split_granules(df)
+    df['title_stub'] = df['title'].str.split('_T', expand=True).loc[:,0] + '_' + df['granule-ref'].str[:6]
+
+    no_split_df = df[~df['title'].str.contains("SPLIT")]
 
     # import safe granule-orb list
     if Path(Path.cwd() / 'static' / 'safe-granule-orbit-list.txt').exists():
@@ -431,39 +427,6 @@ def find_minimum_cloud_list(df):
 
     return return_df  
 
-def ignore_split_granules(df):
-    """
-    eods query "special" keyword function
-    + takes the input dataframe and removes all SPLIT granules.
-    + one issue that has to be overcome, if a granule is split by ESA into two:
-        then one of the components has the word 'SPLIT' added to the title,
-        the other component granule of the split 'pair' does not.
-        therefore, this function finds the SPLIT title, then finds the second component
-        and removes BOTH component granules from the dataframe
-    + returns a new dataframe
-    """    
-
-    if len(df[df['title'].str.contains('SPLIT')]) > 0:
-
-        print(datetime.utcnow().isoformat() + ' :: INFO. Split Granules found in query results ... removing')
-
-        # create a title substring which can be matched against a split list
-        df['title_stub'] = df['title'].str.split('_T', expand=True).loc[:,0] + '_' + df['granule-ref'].str[:6]
-
-        """# create a Series object for that only contains the title 'sub string' 
-        s = df[df["title"].str.contains("SPLIT")].title.str.split('SPLIT1',expand=True).loc[:,0]
-
-        # select rows from main dataframe where records DO NOT MATCH (~ = syntax) the 'split' series of title stub strings
-        filtered_out_split = df[~df.title_stub.isin(s)]"""
-
-        filtered_out_split = df[~df['title'].str.contains("SPLIT")]
-
-        return filtered_out_split
-
-    else:
-        print(datetime.utcnow().isoformat() + ' :: INFO. No split granules found in query results')
-        
-        return df
 
 def query_catalog(conn, **kwargs):
     """Transform vectors from source to target coordinate reference system.
@@ -520,9 +483,6 @@ def query_catalog(conn, **kwargs):
             * 0 to n 
     find_least_cloud: bool, optional:
         custom filter to generate a list of least cloud per granule
-    ignore_split_granules: bool, optional:
-        custom filter to generate a list of layers that does not contain
-        the str "SPLIT" in the title
     verify: str, optional:
         add custom path to any organisation certificate stores that the
         environment needs
@@ -650,11 +610,6 @@ def query_catalog(conn, **kwargs):
                         df['split_cloud_cover'] = split_cloud_cover
 
                         filtered_df = find_minimum_cloud_list(df)
-                elif 'ignore_split_granules' in kwargs:
-                    if kwargs['ignore_split_granules']:
-                        filtered_df = ignore_split_granules(df)
-                    else:
-                        filtered_df = df.copy()
                 else:
                     filtered_df = df.copy()
 
