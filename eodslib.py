@@ -643,9 +643,6 @@ def query_catalog(conn, **kwargs):
                         df['split_ARCSI_CLOUD_COVER'] = np.nan
                         df.loc[df['split_granule.name'].notna(), 'split_ARCSI_CLOUD_COVER'] = merged_df['split_ARCSI_CLOUD_COVER']
 
-                        df.loc[df['id']==9281, 'ARCSI_CLOUD_COVER'] = '0.2'
-                        df.loc[df['id']==9117, 'ARCSI_CLOUD_COVER'] = '0.2'
-
                         split_cloud_cover = np.where(df['split_granule.name'].notna(), ((df['ARCSI_CLOUD_COVER'].astype(
                             float) + df['split_ARCSI_CLOUD_COVER'].astype(
                             float).astype(float))/2).astype(str), df['ARCSI_CLOUD_COVER'])
