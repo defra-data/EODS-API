@@ -130,3 +130,4 @@ archive/
 data/
 scratch*.py
 .env
+*debug*.*
