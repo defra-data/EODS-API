@@ -11,7 +11,7 @@ if __name__ == "__main__":
     start_time = datetime.utcnow()
 
     # USER MUST EDIT THE ENVIRONMENT FILE REFERENCED BELOW, OR CREATE THEIR OWN FILE AND REFERENCE IT
-    load_dotenv()
+    load_dotenv('sample.env')
 
     # set configuration based on contents of the ENVIRONMENT FILE.
     conn = {
@@ -26,12 +26,13 @@ if __name__ == "__main__":
     # specify a particular ARD to download using 'title' keyword
     eods_params = {
         'output_dir':output_dir,
-        'title':'S2B_20200424_lat55lon215_T30UWF_ORB037_utm30n_osgb_vmsk_sharp_rad_srefdem_stdsref',
+        'find_least_cloud': True,
+        'sat_id': 2
         }
 
     list_of_layers, df = eodslib.query_catalog(conn, **eods_params)
 
-    list_of_results = []
+    # list_of_results = []
 
     for lyr in list_of_layers:
 
