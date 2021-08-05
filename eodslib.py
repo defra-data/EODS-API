@@ -719,6 +719,7 @@ def post_to_layer_group_api(conn, url, the_json):
             params=params,
             headers=headers,
             json=the_json,
+            verify=False
             )
 
         # raise an error if the response status is not successful
@@ -778,7 +779,10 @@ def create_layer_group(conn, list_of_layers, name, abstract=None):
     if len(name) == 0 :
         raise ValueError('ERROR. layer group name string is empty, aborting ...')
 
-    url = f'{conn["domain"]}/api/layer_groups/'
+    url = f'{conn["domain"]}api/layer_groups/'
+
+    print(conn['domain'])
+    print(url)
    
     the_json = {'name': name, 'abstract': abstract, 'layers': list_of_layers}
     
