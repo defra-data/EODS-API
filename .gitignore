@@ -98,6 +98,10 @@ celerybeat-schedule
 
 # Environments
 .env
+AGW.env
+SND.env
+PRE.env
+PRD.env
 .venv
 env/
 venv/
@@ -125,8 +129,8 @@ dmypy.json
 
 # custom ignores
 output/*
+tests/output/*
 .vscode/
 archive/
 data/
 scratch*.py
-.env
