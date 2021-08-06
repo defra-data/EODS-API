@@ -52,6 +52,8 @@ def test_crop(setup):
 
     os.rename(setup / 'wps-log.csv', setup / 'wps-log-gs-rcrop-test.csv')
     os.rename(setup / 'eods-query-all-results.csv', setup / 'eods-query-all-results-gs-rcrop-test.csv')
+    os.rename(setup / 'keep_api_test_create_group.tiff', setup / 'keep_api_test_create_group_gs_rcrop.tiff')
+
 
     log_df = pd.read_csv(setup / 'wps-log-gs-rcrop-test.csv')
 
@@ -66,7 +68,7 @@ def test_crop(setup):
 
 
     hash = hashlib.sha3_256()
-    with open(setup / 'keep_api_test_create_group.tiff', "rb") as f:
+    with open(setup / 'keep_api_test_create_group_gs_rcrop.tiff', "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hash.update(chunk)
     hash_out = hash.hexdigest()

@@ -45,6 +45,7 @@ def test_download(setup):
 
     os.rename(setup / 'wps-log.csv', setup / 'wps-log-gs-dl-test.csv')
     os.rename(setup / 'eods-query-all-results.csv', setup / 'eods-query-all-results-gs-dl-test.csv')
+    os.rename(setup / 'keep_api_test_create_group.tiff', setup / 'keep_api_test_create_group_gs_dl.tiff')
 
     df = pd.read_csv(setup / 'wps-log-gs-dl-test.csv')
 
@@ -59,7 +60,7 @@ def test_download(setup):
 
 
     hash = hashlib.sha3_256()
-    with open(setup / 'keep_api_test_create_group.tiff', "rb") as f:
+    with open(setup / 'keep_api_test_create_group_gs_dl.tiff', "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hash.update(chunk)
     hash_out = hash.hexdigest()
