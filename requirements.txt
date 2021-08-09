@@ -8,3 +8,5 @@ pyproj==3.0.1
 xmltodict==0.12.0
 python-dotenv==0.17.1
 pytest==6.2.4
+pytest-mock==3.6.1
+responses==0.13.4

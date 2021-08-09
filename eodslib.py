@@ -684,7 +684,7 @@ def get_bbox_corners_from_wkt(csw_wkt_geometry,epsg):
 
     return ll_proj_pt, ur_proj_pt
 
-def post_to_layer_group_api(conn, url, the_json):
+def post_to_layer_group_api(conn, url, the_json, quiet=True):
     """
     post content layergroup endpoint
 
@@ -712,28 +712,38 @@ def post_to_layer_group_api(conn, url, the_json):
 
     params = {'username':conn['username'],'api_key':conn['access_token']}
 
-    try:
-        # post the the EODS layer group api endpoint
-        response = requests.post(
-            url,
-            params=params,
-            headers=headers,
-            json=the_json,
-            verify=False
-            )
+    # post the the EODS layer group api endpoint
+    response = requests.post(
+        url,
+        params=params,
+        headers=headers,
+        json=the_json,
+        verify=False
+        )
+    if quiet:
+        try:
+            # raise an error if the response status is not successful
+            response.raise_for_status()
 
-        # raise an error if the response status is not successful
-        print(response.raise_for_status()) 
+            # if response is successful, print the response text
+            print(f'\n## Response posting to {response.url} was successful ...')
+            print(f'\n## Response text : \n{response.text}')
+            print(f'\n## Response content : \n{response.content}')
+            
+            return json.loads(response.content)
+            
+        except Exception as error:
+            print('Error caught as exception')
+            print(error)
+    else:
+        response.raise_for_status()
 
         # if response is successful, print the response text
         print(f'\n## Response posting to {response.url} was successful ...')
         print(f'\n## Response text : \n{response.text}')
+        print(f'\n## Response content : \n{response.content}')
         
         return json.loads(response.content)
-        
-    except Exception as error:
-        print('Error caught as exception')
-        print(error)
 
 def create_layer_group(conn, list_of_layers, name, abstract=None):
     """
@@ -780,9 +790,6 @@ def create_layer_group(conn, list_of_layers, name, abstract=None):
         raise ValueError('ERROR. layer group name string is empty, aborting ...')
 
     url = f'{conn["domain"]}api/layer_groups/'
-
-    print(conn['domain'])
-    print(url)
    
     the_json = {'name': name, 'abstract': abstract, 'layers': list_of_layers}
     
@@ -838,3 +845,23 @@ def modify_layer_group(conn, list_of_layers, layergroup_id, abstract=None):
     response_json = post_to_layer_group_api(conn, url, the_json)
     
     return response_json
+
+
+def test(conn, url, the_json):
+
+    headers={'Content-type': 'application/json','User-Agent': 'eods scripting'}
+
+    params = {'username':conn['username'],'api_key':conn['access_token']}
+
+    # post the the EODS layer group api endpoint
+    response = requests.post(
+        url,
+        params=params,
+        headers=headers,
+        json=the_json,
+        verify=False
+        )
+
+    response.raise_for_status()
+
+    return response.content
