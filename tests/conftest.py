@@ -15,6 +15,7 @@ def pytest_addoption(parser):
     parser.addoption("--env", dest="env", required=True, action="store", choices=[
                      "DEV", "AGW", "SND", "PRE", "PRD"], help="The selected tenancy: DEV, AGW, SND, PRE, or PRD")
     parser.addoption("--mod-id", dest="mod-id", default=0, type=int, action="store", help="The integer id of the group updated by test_modify_group.py, required if test_create_group.py is not also run prior. 0 is a reserved value.")
+    parser.addoption("--skip-real", dest="skip-real", action="store_true", help="")
 
 @pytest.fixture(autouse=True, scope='session')
 def env(request):
@@ -65,3 +66,14 @@ def set_modify_id(modify_id_list, request):
     parsed_id = request.config.getoption("--mod-id")
     if parsed_id != 0:
         modify_id_list.append(parsed_id)
+
+@pytest.fixture(autouse=True)
+def skip_by_real(request, set_if_skip_real):
+    if set_if_skip_real:
+        if request.node.get_closest_marker('skip_real'):
+            pytest.skip('Skipping tests that hit the real API server.')
+
+@pytest.fixture(scope='session', autouse=True)
+def set_if_skip_real(request):
+    skip_real = request.config.getoption("--skip-real")
+    return skip_real

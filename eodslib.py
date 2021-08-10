@@ -406,7 +406,7 @@ def find_minimum_cloud_list(df):
         raise ValueError('ERROR :: safe-granule-orbit-list.txt cannot be found')
 
     # create new col that matches the granule-orbit syntax
-    no_split_df['gran-orb'] = no_split_df['granule-ref'].str[:6] + '_' + no_split_df['orbit-ref']
+    no_split_df['gran-orb'] = no_split_df['granule-ref'].str[:6] + '_' + no_split_df['orbit-ref']   
     no_split_df['granule-stub'] = no_split_df['granule-ref'].str[:6]
 
     df['gran-orb'] = df['granule-ref'].str[:6] + '_' + df['orbit-ref']
@@ -423,7 +423,7 @@ def find_minimum_cloud_list(df):
         return_df = pd.concat([return_df, matching_split_df], ignore_index=True)
 
     else:
-        raise ValueError('ERROR : You have selected find_lowest_cloud=True BUT your search criteria is too narrow, spatially or temporally and did not match any granule references in "./static/safe-granule-orbit-list.txt". Suggest widening your search')
+        raise ValueError('ERROR : You have selected find_least_cloud=True BUT your search criteria is too narrow, spatially or temporally and did not match any granule references in "./static/safe-granule-orbit-list.txt". Suggest widening your search')
 
     return return_df  
 
@@ -605,7 +605,7 @@ def query_catalog(conn, **kwargs):
 
                         split_cloud_cover = np.where(df['split_granule.name'].notna(), ((df['ARCSI_CLOUD_COVER'].astype(
                             float) + df['split_ARCSI_CLOUD_COVER'].astype(
-                            float).astype(float))/2).astype(str), df['ARCSI_CLOUD_COVER'])
+                            float))/2).astype(str), df['ARCSI_CLOUD_COVER'])
 
                         df['split_cloud_cover'] = split_cloud_cover
 
@@ -713,15 +713,15 @@ def post_to_layer_group_api(conn, url, the_json, quiet=True):
     params = {'username':conn['username'],'api_key':conn['access_token']}
 
     # post the the EODS layer group api endpoint
-    response = requests.post(
-        url,
-        params=params,
-        headers=headers,
-        json=the_json,
-        verify=False
-        )
     if quiet:
         try:
+            response = requests.post(
+                url,
+                params=params,
+                headers=headers,
+                json=the_json,
+                verify=False
+                )
             # raise an error if the response status is not successful
             response.raise_for_status()
 
@@ -736,6 +736,14 @@ def post_to_layer_group_api(conn, url, the_json, quiet=True):
             print('Error caught as exception')
             print(error)
     else:
+        response = requests.post(
+            url,
+            params=params,
+            headers=headers,
+            json=the_json,
+            verify=False
+            )
+
         response.raise_for_status()
 
         # if response is successful, print the response text
@@ -745,7 +753,7 @@ def post_to_layer_group_api(conn, url, the_json, quiet=True):
         
         return json.loads(response.content)
 
-def create_layer_group(conn, list_of_layers, name, abstract=None):
+def create_layer_group(conn, list_of_layers, name, abstract=None, quiet=True):
     """
     create a layer group 
 
@@ -793,11 +801,11 @@ def create_layer_group(conn, list_of_layers, name, abstract=None):
    
     the_json = {'name': name, 'abstract': abstract, 'layers': list_of_layers}
     
-    response_json = post_to_layer_group_api(conn, url, the_json)
+    response_json = post_to_layer_group_api(conn, url, the_json, quiet=quiet)
     
     return response_json
     
-def modify_layer_group(conn, list_of_layers, layergroup_id, abstract=None):
+def modify_layer_group(conn, list_of_layers, layergroup_id, abstract=None, quiet=True):
     """
     modify a layer group, referencing the layergroup ID and list of layers
 
@@ -842,7 +850,7 @@ def modify_layer_group(conn, list_of_layers, layergroup_id, abstract=None):
     
     the_json = {'abstract':abstract, 'layers':list_of_layers}
     
-    response_json = post_to_layer_group_api(conn, url, the_json)
+    response_json = post_to_layer_group_api(conn, url, the_json, quiet=quiet)
     
     return response_json
 
