@@ -7,7 +7,8 @@ from io import BytesIO
 import zipfile
 import pandas as pd
 
-def test_download(setup):
+def test_download(set_output_dir):
+    output_dir = set_output_dir
     conn = {
     'domain': os.getenv("HOST"),
     'username': os.getenv("API_USER"),
@@ -15,7 +16,7 @@ def test_download(setup):
     }
 
     eods_params = {
-    'output_dir':setup,
+    'output_dir':output_dir,
     'title':'keep_api_test_create_group',
     'verify': False,
     #'limit':1,
@@ -35,19 +36,17 @@ def test_download(setup):
         'dl_bool':True
     }
 
-    output_dir = setup
-
     execution_dict = eodslib.run_wps(conn, config_wpsprocess, output_dir=output_dir, verify=False)
 
     list_of_results.append(execution_dict)
 
     eodslib.output_log(list_of_results)
 
-    os.rename(setup / 'wps-log.csv', setup / 'wps-log-gs-dl-test.csv')
-    os.rename(setup / 'eods-query-all-results.csv', setup / 'eods-query-all-results-gs-dl-test.csv')
-    os.rename(setup / 'keep_api_test_create_group.tiff', setup / 'keep_api_test_create_group_gs_dl.tiff')
+    os.rename(output_dir / 'wps-log.csv', output_dir / 'wps-log-gs-dl-test.csv')
+    os.rename(output_dir / 'eods-query-all-results.csv', output_dir / 'eods-query-all-results-gs-dl-test.csv')
+    os.rename(output_dir / 'keep_api_test_create_group.tiff', output_dir / 'keep_api_test_create_group_gs_dl.tiff')
 
-    df = pd.read_csv(setup / 'wps-log-gs-dl-test.csv')
+    df = pd.read_csv(output_dir / 'wps-log-gs-dl-test.csv')
 
     if len(df.index) != 1:
         errors.append(f'Content Error: output log should contain only 1 row, got {len(df.index)} rows')
@@ -60,7 +59,7 @@ def test_download(setup):
 
 
     hash = hashlib.sha3_256()
-    with open(setup / 'keep_api_test_create_group_gs_dl.tiff', "rb") as f:
+    with open(output_dir / 'keep_api_test_create_group_gs_dl.tiff', "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hash.update(chunk)
     hash_out = hash.hexdigest()

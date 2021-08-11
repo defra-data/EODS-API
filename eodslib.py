@@ -23,7 +23,6 @@ import shapely
 import shapely.wkt
 from shapely.ops import transform
 import pyproj
-import shutil
 import numpy as np
 os.environ['PROJ_NETWORK'] = 'OFF'
 
@@ -587,6 +586,9 @@ def query_catalog(conn, **kwargs):
             if json_response['meta']['total_count'] > 0:
 
                 df = json_normalize(json_response, 'objects')
+                # debugging lines - see L801 tests/test_unit.py (not str values being returned as strs via mocker)
+                print(type(df['split_granule.name'].iloc[0]))
+                print(repr(df['split_granule.name'].iloc[0]))
 
                 # add extra cols to df for s2 info
                 if 'sat_id' in kwargs:
@@ -616,7 +618,7 @@ def query_catalog(conn, **kwargs):
                 # make output paths
                 path_output = make_output_dir(kwargs['output_dir'])
                 log_file_name = path_output / 'eods-query-all-results.csv'
-                filtered_df.to_csv(log_file_name)                    
+                filtered_df.to_csv(log_file_name)
             
                 output_list = filtered_df['alternate'].tolist()
 

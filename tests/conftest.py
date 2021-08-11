@@ -51,11 +51,13 @@ def setup(env):
                 base_eodslib_path / env_file_name
                 )
     # load_dotenv(dotenv_path = '.env.' + env + '.secret')
+    yield None
 
-    output_dir = eodslib.make_output_dir(Path(os.path.dirname(os.path.realpath(__file__))) / 'output' / datetime.utcnow().strftime(
-        "%Y-%m-%dT%H%M%SZ"))
-
-    yield output_dir
+@pytest.fixture(scope='session')
+def set_output_dir():
+        output_dir = eodslib.make_output_dir(Path(os.path.dirname(os.path.realpath(__file__))) / 'output' / datetime.utcnow().strftime(
+            "%Y-%m-%dT%H%M%SZ"))
+        yield output_dir
 
 @pytest.fixture(scope='session', autouse=True)
 def modify_id_list():
@@ -68,12 +70,7 @@ def set_modify_id(modify_id_list, request):
         modify_id_list.append(parsed_id)
 
 @pytest.fixture(autouse=True)
-def skip_by_real(request, set_if_skip_real):
-    if set_if_skip_real:
+def skip_by_real(request):
+    if request.config.getoption("--skip-real"):
         if request.node.get_closest_marker('skip_real'):
             pytest.skip('Skipping tests that hit the real API server.')
-
-@pytest.fixture(scope='session', autouse=True)
-def set_if_skip_real(request):
-    skip_real = request.config.getoption("--skip-real")
-    return skip_real

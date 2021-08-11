@@ -5,7 +5,8 @@ import pytest
 import hashlib
 
 
-def test_modify(setup, modify_id_list, unique_run_string):
+def test_modify(set_output_dir, modify_id_list, unique_run_string):
+    output_dir = set_output_dir
     conn = {
     'domain': os.getenv("HOST"),
     'username': os.getenv("API_USER"),
@@ -13,7 +14,7 @@ def test_modify(setup, modify_id_list, unique_run_string):
     }
 
     eods_params = {
-    'output_dir':setup,
+    'output_dir':output_dir,
     'title':'keep_api_test_update_group',
     'verify': False,
     #'limit':1,
@@ -21,7 +22,7 @@ def test_modify(setup, modify_id_list, unique_run_string):
 
     list_of_layers, _ = eodslib.query_catalog(conn, **eods_params)
 
-    os.rename(setup / 'eods-query-all-results.csv', setup / 'eods-query-all-results-modify-group-test.csv')
+    os.rename(output_dir / 'eods-query-all-results.csv', output_dir / 'eods-query-all-results-modify-group-test.csv')
 
     errors = []
 

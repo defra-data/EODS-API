@@ -5,7 +5,8 @@ import pytest
 import hashlib
 
 
-def test_query(setup):
+def test_query(set_output_dir):
+    output_dir = set_output_dir
     conn = {
     'domain': os.getenv("HOST"),
     'username': os.getenv("API_USER"),
@@ -13,15 +14,17 @@ def test_query(setup):
     }
 
     eods_params = {
-    'output_dir':setup,
+    'output_dir':output_dir,
     'title':'keep_api_test_create_group',
     'verify': False,
     #'limit':1,
     }
 
     list_of_layers, df = eodslib.query_catalog(conn, **eods_params)
+    print(list_of_layers)
+    print(df)
 
-    os.rename(setup / 'eods-query-all-results.csv', setup / 'eods-query-all-results-query-test.csv')
+    os.rename(output_dir / 'eods-query-all-results.csv', output_dir / 'eods-query-all-results-query-test.csv')
 
     errors = []
 
