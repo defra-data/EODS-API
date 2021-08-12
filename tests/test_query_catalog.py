@@ -1,8 +1,7 @@
 import eodslib
 import os
-from pathlib import Path
 import pytest
-import hashlib
+import pandas as pd
 
 
 def test_query(set_output_dir):
@@ -16,13 +15,18 @@ def test_query(set_output_dir):
     eods_params = {
     'output_dir':output_dir,
     'title':'keep_api_test_create_group',
+    # 'title': 'S2A_20210809_lat53lon071_T30UXD_ORB137_utm30n',
+    # 'title': 'S2A_20200810_lat50lon544_T29UQR_ORB080',
     'verify': False,
-    #'limit':1,
+    # 'sat_id': 2,
+    # 'find_least_cloud': True
+    # 'limit':1,
     }
 
     list_of_layers, df = eodslib.query_catalog(conn, **eods_params)
     print(list_of_layers)
-    print(df)
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        print(df)
 
     os.rename(output_dir / 'eods-query-all-results.csv', output_dir / 'eods-query-all-results-query-test.csv')
 

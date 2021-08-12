@@ -556,9 +556,8 @@ class TestQueryCatalog():
     def test_successful_query_return_correct_list_and_df(self, mocker):
         self.mock_get = mocker.patch('eodslib.requests.get')
         self.mock_get.return_value.status_code = 200
-        self.mock_get.return_value.content = bytes(b'{"meta": {"total_count": 1}, "objects": [{"title":"S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",\
-                                                      "granule-ref": "T12ABC", "orbit-ref": "ORB034", "ARCSI_CLOUD_COVER": "0.15",\
-                                                      "split_granule.name": "geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc", "split_ARCSI_CLOUD_COVER": "0.2", "split_cloud_cover": "0.175"}]}')
+        self.mock_get.return_value.content = bytes(
+            b'{"meta": {"total_count": 1}, "objects": [{"alternate":"geonode:layername"}]}')
 
         self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
         self.mock_make_output_dir.return_value = Path.cwd()
@@ -574,16 +573,15 @@ class TestQueryCatalog():
 
         eods_params = {
             'title': 'keep_api_test_create_group',
-            'verify': False,
         }
 
         output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
 
         expected_output_list = [
-            'geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc']
+            'geonode:layername']
         expected_filtered_df = pd.DataFrame(np.array(
-            [["S2A_date_lat1lon2_T12ABC_ORB034_etc", "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc", "T12ABC", "ORB034", "0.15", "geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc", "0.2", "0.175"]]),
-            columns=["title", "alternate", "granule-ref", "orbit-ref", "ARCSI_CLOUD_COVER", "split_granule.name", "split_ARCSI_CLOUD_COVER", "split_cloud_cover"])
+            [["geonode:layername"]]),
+            columns=["alternate"])
 
         df_difference = filtered_df.compare(expected_filtered_df, align_axis=0)
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
@@ -597,7 +595,7 @@ class TestQueryCatalog():
 
         assert output_list_bool and filtered_df_bool
 
-    def test_sat_id_1_find_least_cloud_trigger_exception(self):
+    def test_find_least_cloud_sat_id_1_trigger_exception(self):
         conn = {
             'domain': os.getenv("HOST"),
             'username': os.getenv("API_USER"),
@@ -606,7 +604,6 @@ class TestQueryCatalog():
 
         eods_params = {
             'title': 'keep_api_test_create_group',
-            'verify': False,
             'sat_id': 1,
             'find_least_cloud': True
         }
@@ -624,7 +621,6 @@ class TestQueryCatalog():
 
         eods_params = {
             'title': 'keep_api_test_create_group',
-            'verify': False,
             'start_date': '2020-01-01'
         }
         with pytest.raises(ValueError) as error:
@@ -641,7 +637,6 @@ class TestQueryCatalog():
 
         eods_params = {
             'title': 'keep_api_test_create_group',
-            'verify': False,
             'end_date': '2020-01-01'
         }
         with pytest.raises(ValueError) as error:
@@ -658,7 +653,6 @@ class TestQueryCatalog():
 
         eods_params = {
             'title': 'keep_api_test_create_group',
-            'verify': False,
             'cloud_min': 1
         }
         with pytest.raises(ValueError) as error:
@@ -675,7 +669,6 @@ class TestQueryCatalog():
 
         eods_params = {
             'title': 'keep_api_test_create_group',
-            'verify': False,
             'cloud_max': 1
         }
         with pytest.raises(ValueError) as error:
@@ -692,7 +685,6 @@ class TestQueryCatalog():
 
         eods_params = {
             'title': 'keep_api_test_create_group',
-            'verify': False,
             'cloud_min': 1,
             'cloud_max': 5,
             'sat_id': 1
@@ -716,7 +708,6 @@ class TestQueryCatalog():
 
         eods_params = {
             'title': 'keep_api_test_create_group',
-            'verify': False,
         }
 
         output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
@@ -747,7 +738,6 @@ class TestQueryCatalog():
 
         eods_params = {
             'title': 'keep_api_test_create_group',
-            'verify': False,
         }
         with pytest.raises(ValueError) as error:
             eodslib.query_catalog(conn, **eods_params)
@@ -776,7 +766,6 @@ class TestQueryCatalog():
 
         eods_params = {
             'title': 'keep_api_test_create_group',
-            'verify': False,
         }
 
         eodslib.query_catalog(conn, **eods_params)
@@ -791,22 +780,16 @@ class TestQueryCatalog():
 
         assert error_message == expected_error
 
-    def test_find_least_cloud_fullgran_return_correct_list_and_df_with_new_cols(self, mocker):
+    def test_sat_id_2_return_correct_list_and_df_with_new_cols(self, mocker):
         self.mock_get = mocker.patch('eodslib.requests.get')
         self.mock_get.return_value.status_code = 200
         self.mock_get.return_value.content = bytes(
             b'{"meta": {"total_count": 1}}')
 
         self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
-        # can't return a df as a mocked value, ints & np.nan returned as equivalent strs. This is obvs not ideal...
-        # Look at tomorrow: stackoverflow? pd.NA works but I don't think it strictly fits use case
-        # replace np.nans in TestPostLayerGroupAPI with pd.NA?
-        # str(NaN) & np.nan do not appear to work
-        self.mock_json_normalize.return_value = pd.DataFrame(np.array([["S2A_date_lat1lon2_T12ABC_ORB034_etc", "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
-                                                                        "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\nARCSI_AOT_RANGE_MAX: 0.9",
-                                                                        pd.NA
-                                                                        ]]),
-                                                             columns=["title", "alternate", "supplemental_information", "split_granule.name"])
+        df = pd.DataFrame({'title': "S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
+                           "supplemental_information": "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\netc"}, index=[0])
+        self.mock_json_normalize.return_value = df
 
         self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
         self.mock_make_output_dir.return_value = Path.cwd()
@@ -829,28 +812,284 @@ class TestQueryCatalog():
 
         eods_params = {
             'title': 'keep_api_test_create_group',
-            'verify': False,
+            'sat_id': 2
+        }
+
+        output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
+
+        expected_filtered_df = pd.DataFrame({'title': "S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
+                                             "supplemental_information": "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\netc",
+                                             "granule-ref": "T12ABC", "orbit-ref": "ORB034", "ARCSI_CLOUD_COVER": "0.12345"}, index=[0])
+
+        expected_output_list = ["geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc"]
+
+        df_difference = filtered_df.compare(expected_filtered_df, align_axis=0)
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            print('Difference between received and expected filtered_dfs:')
+            print(df_difference)
+
+        output_list_bool = output_list == expected_output_list
+        filtered_df_bool = df_difference.empty
+
+        mocker.resetall()
+
+        assert output_list_bool and filtered_df_bool
+
+    def test_sat_id_not_2_return_correct_list_and_df(self, mocker):
+        self.mock_get = mocker.patch('eodslib.requests.get')
+        self.mock_get.return_value.status_code = 200
+        self.mock_get.return_value.content = bytes(
+            b'{"meta": {"total_count": 1}}')
+
+        self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
+        df = pd.DataFrame({"alternate": "geonode:layername",
+                           }, index=[0])
+        self.mock_json_normalize.return_value = df
+
+        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
+        self.mock_make_output_dir.return_value = Path.cwd()
+
+        self.mock_df_to_csv = mocker.patch('eodslib.pd.DataFrame.to_csv')
+        self.mock_df_to_csv = None
+
+        conn = {
+            'domain': os.getenv("HOST"),
+            'username': os.getenv("API_USER"),
+            'access_token': os.getenv("API_TOKEN"),
+        }
+
+        eods_params = {
+            'title': 'keep_api_test_create_group',
+            'sat_id': 1
+        }
+
+        output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
+
+        expected_filtered_df = pd.DataFrame({"alternate": "geonode:layername",
+                                             }, index=[0])
+
+        expected_output_list = ["geonode:layername"]
+
+        df_difference = filtered_df.compare(expected_filtered_df, align_axis=0)
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            print('Difference between received and expected filtered_dfs:')
+            print(df_difference)
+
+        output_list_bool = output_list == expected_output_list
+        filtered_df_bool = df_difference.empty
+
+        mocker.resetall()
+
+        assert output_list_bool and filtered_df_bool
+
+    def test_find_least_cloud_sat_id_not_1_or_2_return_correct_list_and_df(self, mocker):
+        self.mock_get = mocker.patch('eodslib.requests.get')
+        self.mock_get.return_value.status_code = 200
+        self.mock_get.return_value.content = bytes(
+            b'{"meta": {"total_count": 1}}')
+
+        self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
+        df = pd.DataFrame({"alternate": "geonode:layername",
+                           }, index=[0])
+        self.mock_json_normalize.return_value = df
+
+        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
+        self.mock_make_output_dir.return_value = Path.cwd()
+
+        self.mock_df_to_csv = mocker.patch('eodslib.pd.DataFrame.to_csv')
+        self.mock_df_to_csv = None
+
+        conn = {
+            'domain': os.getenv("HOST"),
+            'username': os.getenv("API_USER"),
+            'access_token': os.getenv("API_TOKEN"),
+        }
+
+        eods_params = {
+            'title': 'keep_api_test_create_group',
+            'sat_id': 3,
+            'find_least_cloud': True
+        }
+
+        output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
+
+        expected_filtered_df = pd.DataFrame({"alternate": "geonode:layername",
+                                             }, index=[0])
+
+        expected_output_list = ["geonode:layername"]
+
+        df_difference = filtered_df.compare(expected_filtered_df, align_axis=0)
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            print('Difference between received and expected filtered_dfs:')
+            print(df_difference)
+
+        output_list_bool = output_list == expected_output_list
+        filtered_df_bool = df_difference.empty
+
+        mocker.resetall()
+
+        assert output_list_bool and filtered_df_bool
+
+    def test_find_least_cloud_false_sat_id_2_return_correct_list_and_df_with_new_cols(self, mocker):
+        self.mock_get = mocker.patch('eodslib.requests.get')
+        self.mock_get.return_value.status_code = 200
+        self.mock_get.return_value.content = bytes(
+            b'{"meta": {"total_count": 1}}')
+
+        self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
+        df = pd.DataFrame({'title': "S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
+                           "supplemental_information": "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\netc"}, index=[0])
+        self.mock_json_normalize.return_value = df
+
+        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
+        self.mock_make_output_dir.return_value = Path.cwd()
+
+        self.mock_df_to_csv = mocker.patch('eodslib.pd.DataFrame.to_csv')
+        self.mock_df_to_csv = None
+
+        conn = {
+            'domain': os.getenv("HOST"),
+            'username': os.getenv("API_USER"),
+            'access_token': os.getenv("API_TOKEN"),
+        }
+
+        eods_params = {
+            'title': 'keep_api_test_create_group',
+            'sat_id': 2,
+            'find_least_cloud': False
+        }
+
+        output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
+
+        expected_filtered_df = pd.DataFrame({'title': "S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
+                                             "supplemental_information": "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\netc",
+                                             "granule-ref": "T12ABC", "orbit-ref": "ORB034", "ARCSI_CLOUD_COVER": "0.12345"}, index=[0])
+
+        expected_output_list = ["geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc"]
+
+        df_difference = filtered_df.compare(expected_filtered_df, align_axis=0)
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            print('Difference between received and expected filtered_dfs:')
+            print(df_difference)
+
+        output_list_bool = output_list == expected_output_list
+        filtered_df_bool = df_difference.empty
+
+        mocker.resetall()
+
+        assert output_list_bool and filtered_df_bool
+
+    def test_find_least_cloud_sat_id_2_fullgran_return_correct_list_and_df_with_new_cols(self, mocker):
+        self.mock_get = mocker.patch('eodslib.requests.get')
+        self.mock_get.return_value.status_code = 200
+        self.mock_get.return_value.content = bytes(
+            b'{"meta": {"total_count": 1}}')
+
+        self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
+        df = pd.DataFrame({'title': "S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
+                           "supplemental_information": "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\netc"}, index=[0])
+        self.mock_json_normalize.return_value = df
+
+        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
+        self.mock_make_output_dir.return_value = Path.cwd()
+
+        self.mock_df_to_csv = mocker.patch('eodslib.pd.DataFrame.to_csv')
+        self.mock_df_to_csv = None
+
+        self.mock_minimum_cloud = mocker.patch(
+            'eodslib.find_minimum_cloud_list')
+
+        def side_effect_fn(*args, **kwargs):
+            return args[0]
+        self.mock_minimum_cloud.side_effect = side_effect_fn
+
+        conn = {
+            'domain': os.getenv("HOST"),
+            'username': os.getenv("API_USER"),
+            'access_token': os.getenv("API_TOKEN"),
+        }
+
+        eods_params = {
+            'title': 'keep_api_test_create_group',
             'find_least_cloud': True,
             'sat_id': 2
         }
 
         output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
 
-        """with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-            print(filtered_df)
-            print(type(filtered_df['split_granule.name'].iloc[0]))
-            print(repr(filtered_df['split_granule.name'].iloc[0]))
-            print(filtered_df['split_granule.name'].iloc[0])
-            print(filtered_df[filtered_df['split_granule.name'].notna()])"""
+        expected_filtered_df = pd.DataFrame({'title': "S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
+                                             "supplemental_information": "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\netc",
+                                             "granule-ref": "T12ABC", "orbit-ref": "ORB034", "ARCSI_CLOUD_COVER": "0.12345", "split_cloud_cover": "0.12345"}, index=[0])
 
-        expected_filtered_df = self.mock_json_normalize.return_value = pd.DataFrame(np.array([["S2A_date_lat1lon2_T12ABC_ORB034_etc", "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
-                                                                                               "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\nARCSI_AOT_RANGE_MAX: 0.9",
-                                                                                               pd.NA, "T12ABC", "ORB034", "0.12345", pd.NA, "0.12345"
-                                                                                               ]]),
-                                                                                    columns=["title", "alternate", "supplemental_information", "split_granule.name",
-                                                                                             "granule-ref", "orbit-ref", "ARCSI_CLOUD_COVER", "split_ARCSI_CLOUD_COVER",
-                                                                                             "split_cloud_cover"])
         expected_output_list = ["geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc"]
+
+        df_difference = filtered_df.compare(expected_filtered_df, align_axis=0)
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            print('Difference between received and expected filtered_dfs:')
+            print(df_difference)
+
+        output_list_bool = output_list == expected_output_list
+        filtered_df_bool = df_difference.empty
+
+        mocker.resetall()
+
+        assert output_list_bool and filtered_df_bool
+
+    def test_find_least_cloud_sat_id_2_both_split_gran_components_return_correct_list_and_df_with_new_cols(self, mocker):
+        self.mock_get = mocker.patch('eodslib.requests.get')
+        self.mock_get.return_value.status_code = 200
+        self.mock_get.return_value.content = bytes(
+            b'{"meta": {"total_count": 1}}')
+
+        self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
+        df = pd.DataFrame({'title': ["S2A_date_lat1lon2_T12ABC_ORB034_etc", "S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc"],
+                           "alternate": ["geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc", "geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc"],
+                           "supplemental_information": ["Data Collection Time: time\nARCSI_CLOUD_COVER: 0.1\netc",
+                                                        "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.3\netc"],
+                           "split_granule.name": ["geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc", "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc"],
+                           })
+        self.mock_json_normalize.return_value = df
+
+        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
+        self.mock_make_output_dir.return_value = Path.cwd()
+
+        self.mock_df_to_csv = mocker.patch('eodslib.pd.DataFrame.to_csv')
+        self.mock_df_to_csv = None
+
+        self.mock_minimum_cloud = mocker.patch(
+            'eodslib.find_minimum_cloud_list')
+
+        def side_effect_fn(*args, **kwargs):
+            return args[0]
+        self.mock_minimum_cloud.side_effect = side_effect_fn
+
+        conn = {
+            'domain': os.getenv("HOST"),
+            'username': os.getenv("API_USER"),
+            'access_token': os.getenv("API_TOKEN"),
+        }
+
+        eods_params = {
+            'title': 'keep_api_test_create_group',
+            'find_least_cloud': True,
+            'sat_id': 2
+        }
+
+        output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
+
+        expected_filtered_df = pd.DataFrame({'title': ["S2A_date_lat1lon2_T12ABC_ORB034_etc", "S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc"],
+                                             "alternate": ["geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc", "geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc"],
+                                             "supplemental_information": ["Data Collection Time: time\nARCSI_CLOUD_COVER: 0.1\netc",
+                                                                          "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.3\netc"],
+                                             "split_granule.name": ["geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc", "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc"],
+                                             "granule-ref": ["T12ABC", "T12ABCSPLIT1"],
+                                             "orbit-ref": ["ORB034", "ORB034"],
+                                             "ARCSI_CLOUD_COVER": ["0.1", "0.3"],
+                                             "split_ARCSI_CLOUD_COVER": ["0.3", "0.1"],
+                                             "split_cloud_cover": ["0.2", "0.2"]
+                                             })
+
+        expected_output_list = ["geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc", "geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc"]
 
         df_difference = filtered_df.compare(expected_filtered_df, align_axis=0)
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):

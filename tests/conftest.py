@@ -51,7 +51,7 @@ def setup(env):
                 base_eodslib_path / env_file_name
                 )
     # load_dotenv(dotenv_path = '.env.' + env + '.secret')
-    yield None
+    yield base_eodslib_path
 
 @pytest.fixture(scope='session')
 def set_output_dir():

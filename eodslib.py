@@ -399,8 +399,8 @@ def find_minimum_cloud_list(df):
     no_split_df = df[~df['title'].str.contains("SPLIT")]
 
     # import safe granule-orb list
-    if Path(Path.cwd() / 'static' / 'safe-granule-orbit-list.txt').exists():
-        df_safe_list = pd.read_csv(Path.cwd() / 'static' / 'safe-granule-orbit-list.txt')
+    if Path(Path(os.path.dirname(os.path.realpath(__file__))) / 'static' / 'safe-granule-orbit-list.txt').exists():
+        df_safe_list = pd.read_csv(Path(os.path.dirname(os.path.realpath(__file__))) / 'static' / 'safe-granule-orbit-list.txt')
     else:
         raise ValueError('ERROR :: safe-granule-orbit-list.txt cannot be found')
 
@@ -416,11 +416,12 @@ def find_minimum_cloud_list(df):
     if len(safe_df) > 0:
         return_df = safe_df.sort_values("split_cloud_cover").groupby(["granule-stub"], as_index=False).nth(0).sort_values("granule-stub")
 
-        matching_split_series = return_df[return_df['split_granule.name'].notna()]['split_granule.name']
-        matching_split_df = df[df['alternate'].isin(matching_split_series)]
+        if 'split_granule.name' in df.columns:
+            matching_split_series = return_df[return_df['split_granule.name'].notna()]['split_granule.name']
+            matching_split_df = df[df['alternate'].isin(matching_split_series)]
 
-        return_df = pd.concat([return_df, matching_split_df], ignore_index=True)
-
+            return_df = pd.concat([return_df, matching_split_df], ignore_index=True)
+        
     else:
         raise ValueError('ERROR : You have selected find_least_cloud=True BUT your search criteria is too narrow, spatially or temporally and did not match any granule references in "./static/safe-granule-orbit-list.txt". Suggest widening your search')
 
@@ -586,9 +587,6 @@ def query_catalog(conn, **kwargs):
             if json_response['meta']['total_count'] > 0:
 
                 df = json_normalize(json_response, 'objects')
-                # debugging lines - see L801 tests/test_unit.py (not str values being returned as strs via mocker)
-                print(type(df['split_granule.name'].iloc[0]))
-                print(repr(df['split_granule.name'].iloc[0]))
 
                 # add extra cols to df for s2 info
                 if 'sat_id' in kwargs:
@@ -597,21 +595,31 @@ def query_catalog(conn, **kwargs):
                         df['orbit-ref'] = df['title'].str.split('_',n=5).str[-2]
                         df['ARCSI_CLOUD_COVER'] =df['supplemental_information'].str.split(n=6).str[5]
 
+                with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+                    print(df)
+
                 if 'find_least_cloud' in kwargs and kwargs['sat_id'] == 2:
                     if kwargs['find_least_cloud']:
-                        temp_df = df[df['split_granule.name'].notna()][['alternate', 'ARCSI_CLOUD_COVER']].copy()
-                        temp_df.rename(columns={"alternate": "split_granule.name", "ARCSI_CLOUD_COVER": "split_ARCSI_CLOUD_COVER"}, inplace=True)
-                        merged_df = df[df['split_granule.name'].notna()].reset_index().merge(temp_df, how='outer', on='split_granule.name').set_index('index')
-                        df['split_ARCSI_CLOUD_COVER'] = np.nan
-                        df.loc[df['split_granule.name'].notna(), 'split_ARCSI_CLOUD_COVER'] = merged_df['split_ARCSI_CLOUD_COVER']
+                        if 'split_granule.name' in df.columns:
+                            temp_df = df[df['split_granule.name'].notna()][['alternate', 'ARCSI_CLOUD_COVER']].copy()
+                            temp_df.rename(columns={"alternate": "split_granule.name", "ARCSI_CLOUD_COVER": "split_ARCSI_CLOUD_COVER"}, inplace=True)
+                            merged_df = df[df['split_granule.name'].notna()].reset_index().merge(temp_df, how='outer', on='split_granule.name').set_index('index')
+                            df['split_ARCSI_CLOUD_COVER'] = np.nan
+                            df.loc[df['split_granule.name'].notna(), 'split_ARCSI_CLOUD_COVER'] = merged_df['split_ARCSI_CLOUD_COVER']
 
-                        split_cloud_cover = np.where(df['split_granule.name'].notna(), ((df['ARCSI_CLOUD_COVER'].astype(
-                            float) + df['split_ARCSI_CLOUD_COVER'].astype(
-                            float))/2).astype(str), df['ARCSI_CLOUD_COVER'])
+                            split_cloud_cover = np.where(df['split_granule.name'].notna(), ((df['ARCSI_CLOUD_COVER'].astype(
+                                float) + df['split_ARCSI_CLOUD_COVER'].astype(
+                                float))/2).astype(str), df['ARCSI_CLOUD_COVER'])
 
-                        df['split_cloud_cover'] = split_cloud_cover
+                            df['split_cloud_cover'] = split_cloud_cover
+                        
+                        else:
+                            df['split_cloud_cover'] = df['ARCSI_CLOUD_COVER']
 
                         filtered_df = find_minimum_cloud_list(df)
+
+                    else:
+                        filtered_df = df.copy()
                 else:
                     filtered_df = df.copy()
 
