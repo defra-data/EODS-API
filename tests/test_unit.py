@@ -1102,5 +1102,3 @@ class TestQueryCatalog():
         mocker.resetall()
 
         assert output_list_bool and filtered_df_bool
-
-        # add test for split with missing counterpart

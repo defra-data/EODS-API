@@ -595,9 +595,6 @@ def query_catalog(conn, **kwargs):
                         df['orbit-ref'] = df['title'].str.split('_',n=5).str[-2]
                         df['ARCSI_CLOUD_COVER'] =df['supplemental_information'].str.split(n=6).str[5]
 
-                with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-                    print(df)
-
                 if 'find_least_cloud' in kwargs and kwargs['sat_id'] == 2:
                     if kwargs['find_least_cloud']:
                         if 'split_granule.name' in df.columns:
@@ -863,23 +860,3 @@ def modify_layer_group(conn, list_of_layers, layergroup_id, abstract=None, quiet
     response_json = post_to_layer_group_api(conn, url, the_json, quiet=quiet)
     
     return response_json
-
-
-def test(conn, url, the_json):
-
-    headers={'Content-type': 'application/json','User-Agent': 'eods scripting'}
-
-    params = {'username':conn['username'],'api_key':conn['access_token']}
-
-    # post the the EODS layer group api endpoint
-    response = requests.post(
-        url,
-        params=params,
-        headers=headers,
-        json=the_json,
-        verify=False
-        )
-
-    response.raise_for_status()
-
-    return response.content

@@ -29,3 +29,8 @@ If you wish to run this from the tests subdirectory, run this command instead:
 ```bash
 pytest . --env <env-code> -vvv -rA 2>&1 | tee ./output/eodslib_test_output.txt
 ```
+
+# ToDo
+
+* Add tests for find_minimum_cloud_list & query_catlog for when split with missing counterpart eg due to geometry search
+* Add tests for wps fns along with mod_the_xml, output_log, and make_output_dir
