@@ -137,7 +137,7 @@ def submit_wps_queue(request_config, config_wpsprocess):
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
             # response status was not 200
-            raise ValueError('non-200 response, additional info' , str(e))
+            raise ValueError('non-200 response, additional info (MAY CONTAIN SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE)' , str(e))
 
         else:
             if not response.text.find('ExceptionReport') > 0:
@@ -150,7 +150,7 @@ def submit_wps_queue(request_config, config_wpsprocess):
                         }
 
                 print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: WPS JOB SUBMITTED')
-                print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: WPS STATUS CHECK URL : ' + request_config['wps_server'] + '?SERVICE=WPS&VERSION=1.0.0&REQUEST=GETEXECUTIONSTATUS&EXECUTIONID=' + execution_dict['job_id'] + '&access_token=' + request_config['access_token'])
+                print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: WPS STATUS CHECK URL (CONTAINS SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE) : ' + request_config['wps_server'] + '?SERVICE=WPS&VERSION=1.0.0&REQUEST=GETEXECUTIONSTATUS&EXECUTIONID=' + execution_dict['job_id'] + '&access_token=' + request_config['access_token'])
                 
                 return execution_dict
             else:
@@ -162,7 +162,7 @@ def submit_wps_queue(request_config, config_wpsprocess):
 
         execution_dict = error
 
-        print(datetime.utcnow().isoformat() + ' :: WPS submission failed :: check log for errors = ' + str(error.args))
+        print(datetime.utcnow().isoformat() + ' :: WPS submission failed :: check log for errors (CONTAINS SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE) = ' + str(error.args))
 
         return execution_dict
 
@@ -567,8 +567,6 @@ def query_catalog(conn, **kwargs):
             params.update({'cc_min': kwargs['cloud_min']})
             params.update({'cc_max': kwargs['cloud_max']})            
 
-    print('\n' + datetime.utcnow().isoformat() + ' :: PARAMENTERS USED = ' + str(params))
-
     try:
         response = requests.get(
             conn['domain'] + '/api/base/search',
@@ -580,7 +578,7 @@ def query_catalog(conn, **kwargs):
         if response.status_code == 200:
 
             print(datetime.utcnow().isoformat() + ' :: RESPONSE STATUS = 200 (SUCCESS)')
-            print(datetime.utcnow().isoformat() + ' :: QUERY URL USED = ' + response.url)
+            print(datetime.utcnow().isoformat() + ' :: QUERY URL USED (CONTAINS SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE) = ' + response.url)
             
             # create a json object of the api payload content
             json_response = json.loads(response.content)
@@ -639,7 +637,7 @@ def query_catalog(conn, **kwargs):
             return output_list, filtered_df
 
         else:
-            raise ValueError(datetime.utcnow().isoformat() + ' :: RESPONSE STATUS = ' + str(response.status_code) + ' (NOT SUCCESSFUL)' + str(response.status_code) + ' :: QUERY URL = ' + response.url)
+            raise ValueError(datetime.utcnow().isoformat() + ' :: RESPONSE STATUS = ' + str(response.status_code) + ' (NOT SUCCESSFUL)' + str(response.status_code) + ' :: QUERY URL (CONTAINS SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE) = ' + response.url)
 
     except requests.exceptions.RequestException as e:
         print('\n' + datetime.utcnow().isoformat() + ' :: ERROR, an Exception was raised, no list returned')
@@ -731,7 +729,7 @@ def post_to_layer_group_api(conn, url, the_json):
         print(response.raise_for_status()) 
 
         # if response is successful, print the response text
-        print(f'\n## Response posting to {response.url} was successful ...')
+        print(f'\n## Response posting to (CONTAINS SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE) {response.url} was successful ...')
         print(f'\n## Response text : \n{response.text}')
         
         return json.loads(response.content)
