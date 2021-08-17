@@ -137,7 +137,7 @@ def submit_wps_queue(request_config, config_wpsprocess):
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
             # response status was not 200
-            raise ValueError('non-200 response, additional info' , str(e))
+            raise ValueError('non-200 response, additional info (MAY CONTAIN SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE)' , str(e))
 
         else:
             if not response.text.find('ExceptionReport') > 0:
@@ -150,7 +150,7 @@ def submit_wps_queue(request_config, config_wpsprocess):
                         }
 
                 print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: WPS JOB SUBMITTED')
-                print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: WPS STATUS CHECK URL : ' + request_config['wps_server'] + '?SERVICE=WPS&VERSION=1.0.0&REQUEST=GETEXECUTIONSTATUS&EXECUTIONID=' + execution_dict['job_id'] + '&access_token=' + request_config['access_token'])
+                print('\t\t### ' + datetime.utcnow().isoformat() + ' :: job : ' + execution_dict['job_id'] + ' :: WPS STATUS CHECK URL (CONTAINS SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE) : ' + request_config['wps_server'] + '?SERVICE=WPS&VERSION=1.0.0&REQUEST=GETEXECUTIONSTATUS&EXECUTIONID=' + execution_dict['job_id'] + '&access_token=' + request_config['access_token'])
                 
                 return execution_dict
             else:
@@ -162,7 +162,7 @@ def submit_wps_queue(request_config, config_wpsprocess):
 
         execution_dict = error
 
-        print(datetime.utcnow().isoformat() + ' :: WPS submission failed :: check log for errors = ' + str(error.args))
+        print(datetime.utcnow().isoformat() + ' :: WPS submission failed :: check log for errors (CONTAINS SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE) = ' + str(error.args))
 
         return execution_dict
 
@@ -417,13 +417,14 @@ def find_minimum_cloud_list(df):
     if len(safe_df) > 0:
         return_df = safe_df.sort_values("split_cloud_cover").groupby(["granule-stub"], as_index=False).nth(0).sort_values("granule-stub")
 
-        matching_split_series = return_df[return_df['split_granule.name'].notna()]['split_granule.name']
-        matching_split_df = df[df['alternate'].isin(matching_split_series)]
+        if 'split_granule.name' in df.columns:
+            matching_split_series = return_df[return_df['split_granule.name'].notna()]['split_granule.name']
+            matching_split_df = df[df['alternate'].isin(matching_split_series)]
 
-        return_df = pd.concat([return_df, matching_split_df], ignore_index=True)
+            return_df = pd.concat([return_df, matching_split_df], ignore_index=True)
 
     else:
-        raise ValueError('ERROR : You have selected find_lowest_cloud=True BUT your search criteria is too narrow, spatially or temporally and did not match any granule references in "./static/safe-granule-orbit-list.txt". Suggest widening your search')
+        raise ValueError('ERROR : You have selected find_least_cloud=True BUT your search criteria is too narrow, spatially or temporally and did not match any granule references in "./static/safe-granule-orbit-list.txt". Suggest widening your search')
 
     return return_df  
 
@@ -566,8 +567,6 @@ def query_catalog(conn, **kwargs):
             params.update({'cc_min': kwargs['cloud_min']})
             params.update({'cc_max': kwargs['cloud_max']})            
 
-    print('\n' + datetime.utcnow().isoformat() + ' :: PARAMENTERS USED = ' + str(params))
-
     try:
         response = requests.get(
             conn['domain'] + '/api/base/search',
@@ -579,7 +578,7 @@ def query_catalog(conn, **kwargs):
         if response.status_code == 200:
 
             print(datetime.utcnow().isoformat() + ' :: RESPONSE STATUS = 200 (SUCCESS)')
-            print(datetime.utcnow().isoformat() + ' :: QUERY URL USED = ' + response.url)
+            print(datetime.utcnow().isoformat() + ' :: QUERY URL USED (CONTAINS SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE) = ' + response.url)
             
             # create a json object of the api payload content
             json_response = json.loads(response.content)
@@ -597,21 +596,26 @@ def query_catalog(conn, **kwargs):
 
                 if 'find_least_cloud' in kwargs and kwargs['sat_id'] == 2:
                     if kwargs['find_least_cloud']:
-                        temp_df = df[df['split_granule.name'].notna()][['alternate', 'ARCSI_CLOUD_COVER']].copy()
-                        temp_df.rename(columns={"alternate": "split_granule.name", "ARCSI_CLOUD_COVER": "split_ARCSI_CLOUD_COVER"}, inplace=True)
-                        merged_df = df[df['split_granule.name'].notna()].reset_index().merge(temp_df, how='outer', on='split_granule.name').set_index('index')
-                        df['split_ARCSI_CLOUD_COVER'] = np.nan
-                        df.loc[df['split_granule.name'].notna(), 'split_ARCSI_CLOUD_COVER'] = merged_df['split_ARCSI_CLOUD_COVER']
-
-                        split_cloud_cover = np.where(df['split_granule.name'].notna(), ((df['ARCSI_CLOUD_COVER'].astype(
-                            float) + df['split_ARCSI_CLOUD_COVER'].astype(
-                            float).astype(float))/2).astype(str), df['ARCSI_CLOUD_COVER'])
-
-                        df['split_cloud_cover'] = split_cloud_cover
+                        if 'split_granule.name' in df.columns:
+                            temp_df = df[df['split_granule.name'].notna()][['alternate', 'ARCSI_CLOUD_COVER']].copy()
+                            temp_df.rename(columns={"alternate": "split_granule.name", "ARCSI_CLOUD_COVER": "split_ARCSI_CLOUD_COVER"}, inplace=True)
+                            merged_df = df[df['split_granule.name'].notna()].reset_index().merge(temp_df, how='outer', on='split_granule.name').set_index('index')
+                            df['split_ARCSI_CLOUD_COVER'] = np.nan
+                            df.loc[df['split_granule.name'].notna(), 'split_ARCSI_CLOUD_COVER'] = merged_df['split_ARCSI_CLOUD_COVER']
+                            split_cloud_cover = np.where(df['split_granule.name'].notna(), ((df['ARCSI_CLOUD_COVER'].astype(
+                                float) + df['split_ARCSI_CLOUD_COVER'].astype(
+                                float))/2).astype(str), df['ARCSI_CLOUD_COVER'])
+                            df['split_cloud_cover'] = split_cloud_cover
+                        
+                        else:
+                            df['split_cloud_cover'] = df['ARCSI_CLOUD_COVER']
 
                         filtered_df = find_minimum_cloud_list(df)
+                    else:
+                        filtered_df = df.copy()
                 else:
                     filtered_df = df.copy()
+
 
                 # make output paths
                 path_output = make_output_dir(kwargs['output_dir'])
@@ -633,7 +637,7 @@ def query_catalog(conn, **kwargs):
             return output_list, filtered_df
 
         else:
-            raise ValueError(datetime.utcnow().isoformat() + ' :: RESPONSE STATUS = ' + str(response.status_code) + ' (NOT SUCCESSFUL)' + str(response.status_code) + ' :: QUERY URL = ' + response.url)
+            raise ValueError(datetime.utcnow().isoformat() + ' :: RESPONSE STATUS = ' + str(response.status_code) + ' (NOT SUCCESSFUL)' + str(response.status_code) + ' :: QUERY URL (CONTAINS SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE) = ' + response.url)
 
     except requests.exceptions.RequestException as e:
         print('\n' + datetime.utcnow().isoformat() + ' :: ERROR, an Exception was raised, no list returned')
@@ -725,7 +729,7 @@ def post_to_layer_group_api(conn, url, the_json):
         print(response.raise_for_status()) 
 
         # if response is successful, print the response text
-        print(f'\n## Response posting to {response.url} was successful ...')
+        print(f'\n## Response posting to (CONTAINS SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE) {response.url} was successful ...')
         print(f'\n## Response text : \n{response.text}')
         
         return json.loads(response.content)
