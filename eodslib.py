@@ -247,7 +247,7 @@ def poll_api_status(execution_dict, request_config, path_output):
         execution_dict.update({
             'job_status':'UNKNOWN-GENERAL-ERROR',
             'continue_process':False,
-            'message':'UNKNOWNN GENERAL ERROR ENCOUNTERED WHEN CHECKING STATUS OF WPS JOB. ERROR MESSAGE:' + str(error),
+            'message':'UNKNOWN GENERAL ERROR ENCOUNTERED WHEN CHECKING STATUS OF WPS JOB. ERROR MESSAGE:' + str(error),
             'timestamp_job_end':datetime.utcnow(),
             })
         return execution_dict

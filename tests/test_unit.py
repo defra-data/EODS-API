@@ -17,9 +17,9 @@ class TestPostLayerGroupAPI():
         self.mock_post.return_value.content = bytes(b'{"a":"b"}')
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         url = f'{conn["domain"]}api/layer_groups/'
@@ -36,9 +36,9 @@ class TestPostLayerGroupAPI():
     @responses.activate
     def test_incorrect_status_code_raise_for_status_triggers_exception(self):
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'https://domain',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         url = f'{conn["domain"]}api/layer_groups/'
@@ -85,9 +85,9 @@ class TestPostLayerGroupAPI():
         self.mock_post.return_value.content = bytes(b'{"a":"b"}')
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         url = f'{conn["domain"]}api/layer_groups/'
@@ -104,9 +104,9 @@ class TestPostLayerGroupAPI():
     @responses.activate
     def test_incorrect_status_code_raise_for_status_quiet_error_stdout_call(self, capsys):
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'https://domain',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         url = f'{conn["domain"]}api/layer_groups/'
@@ -182,9 +182,9 @@ class TestCreateLayerGroup():
         self.mock_post.return_value = 'mock response json'
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         list_of_layers = ['keep_api_test_create_group']
@@ -205,9 +205,9 @@ class TestCreateLayerGroup():
         self.mock_post.return_value = 'mock response json'
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         list_of_layers = 'badstr'
@@ -228,9 +228,9 @@ class TestCreateLayerGroup():
         self.mock_post.return_value = 'mock response json'
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         list_of_layers = ['keep_api_test_create_group']
@@ -251,9 +251,9 @@ class TestCreateLayerGroup():
         self.mock_post.return_value = 'mock response json'
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         list_of_layers = []
@@ -274,9 +274,9 @@ class TestCreateLayerGroup():
         self.mock_post.return_value = 'mock response json'
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         list_of_layers = ['keep_api_test_create_group']
@@ -299,9 +299,9 @@ class TestModifyLayerGroup():
         self.mock_post.return_value = 'mock response json'
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         list_of_layers = ['keep_api_test_create_group']
@@ -321,9 +321,9 @@ class TestModifyLayerGroup():
         self.mock_post.return_value = 'mock response json'
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         list_of_layers = 'badstr'
@@ -344,9 +344,9 @@ class TestModifyLayerGroup():
         self.mock_post.return_value = 'mock response json'
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         list_of_layers = ['keep_api_test_create_group']
@@ -367,9 +367,9 @@ class TestModifyLayerGroup():
         self.mock_post.return_value = 'mock response json'
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         list_of_layers = []
@@ -566,9 +566,9 @@ class TestQueryCatalog():
         self.mock_df_to_csv = None
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -597,9 +597,9 @@ class TestQueryCatalog():
 
     def test_find_least_cloud_sat_id_1_trigger_exception(self):
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -614,9 +614,9 @@ class TestQueryCatalog():
 
     def test_start_date_no_end_date_trigger_exception(self):
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -630,9 +630,9 @@ class TestQueryCatalog():
 
     def test_end_date_no_start_date_trigger_exception(self):
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -646,9 +646,9 @@ class TestQueryCatalog():
 
     def test_cloud_min_no_cloud_max_trigger_exception(self):
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -662,9 +662,9 @@ class TestQueryCatalog():
 
     def test_cloud_max_no_cloud_min_trigger_exception(self):
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -678,9 +678,9 @@ class TestQueryCatalog():
 
     def test_cloud_min_cloud_max_and_sat_id_1_trigger_exception(self):
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -701,9 +701,9 @@ class TestQueryCatalog():
             b'{"meta": {"total_count": 0}}')
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -731,9 +731,9 @@ class TestQueryCatalog():
         self.mock_datetime.utcnow.return_value.isoformat.return_value = 'timestamp'
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -745,7 +745,7 @@ class TestQueryCatalog():
         expected_error = 'timestamp' + ' :: RESPONSE STATUS = ' + \
             str(self.mock_get.return_value.status_code) + ' (NOT SUCCESSFUL)' + \
             str(self.mock_get.return_value.status_code) + \
-            ' :: QUERY URL = ' + 'testurl'
+            ' :: QUERY URL (CONTAINS SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE) = ' + 'testurl'
 
         mocker.resetall()
 
@@ -759,9 +759,9 @@ class TestQueryCatalog():
         self.mock_datetime.utcnow.return_value.isoformat.return_value = 'timestamp'
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -772,7 +772,7 @@ class TestQueryCatalog():
 
         captured_out = capsys.readouterr().out
         trim_out = captured_out.strip('\n')
-        error_message = trim_out.split('\n\n')[1]
+        error_message = trim_out
 
         expected_error = "timestamp :: ERROR, an Exception was raised, no list returned\ntest error message"
 
@@ -805,9 +805,9 @@ class TestQueryCatalog():
         self.mock_minimum_cloud.side_effect = side_effect_fn
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -853,9 +853,9 @@ class TestQueryCatalog():
         self.mock_df_to_csv = None
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -900,9 +900,9 @@ class TestQueryCatalog():
         self.mock_df_to_csv = None
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -948,9 +948,9 @@ class TestQueryCatalog():
         self.mock_df_to_csv = None
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -1004,9 +1004,9 @@ class TestQueryCatalog():
         self.mock_minimum_cloud.side_effect = side_effect_fn
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -1064,9 +1064,9 @@ class TestQueryCatalog():
         self.mock_minimum_cloud.side_effect = side_effect_fn
 
         conn = {
-            'domain': os.getenv("HOST"),
-            'username': os.getenv("API_USER"),
-            'access_token': os.getenv("API_TOKEN"),
+            'domain': 'domainname',
+            'username': 'username',
+            'access_token': 'token',
         }
 
         eods_params = {
@@ -1089,7 +1089,8 @@ class TestQueryCatalog():
                                              "split_cloud_cover": ["0.2", "0.2"]
                                              })
 
-        expected_output_list = ["geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc", "geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc"]
+        expected_output_list = ["geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
+                                "geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc"]
 
         df_difference = filtered_df.compare(expected_filtered_df, align_axis=0)
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
@@ -1102,3 +1103,128 @@ class TestQueryCatalog():
         mocker.resetall()
 
         assert output_list_bool and filtered_df_bool
+
+
+class TestRunWps():
+    def test_all_correct_responses_return_correct_execution_dict(self, mocker):
+        self.mock_submit_queue = mocker.patch('eodslib.submit_wps_queue')
+        self.mock_submit_queue.return_value = {'job_id': '123', 'layer_name': 'geonode:layername',
+                                               'timestamp_job_start': datetime(2021, 8, 17), 'timestamp_job_end': datetime(2021, 8, 18),
+                                               'continue_process': True}
+
+        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
+        self.mock_make_output_dir.return_value = Path.cwd()
+
+        self.mock_poll = mocker.patch(
+            'eodslib.poll_api_status')
+
+        def poll_side_effect_fn(*args, **kwargs):
+            execution_dict = args[0]
+            execution_dict['continue_process'] = False
+            execution_dict['job_status'] = 'DOWNLOAD-SUCCESSFUL'
+            return execution_dict
+
+        self.mock_poll.side_effect = poll_side_effect_fn
+
+        self.mock_process = mocker.patch(
+            'eodslib.process_wps_downloaded_files')
+
+        def process_side_effect_fn(*args, **kwargs):
+            execution_dict = args[0]
+            return execution_dict
+
+        self.mock_process.side_effect = process_side_effect_fn
+
+        conn = {
+            'domain': 'domainname',
+            'access_token': 'token',
+        }
+
+        config_wpsprocess = {
+        }
+
+        execution_dict = eodslib.run_wps(conn, config_wpsprocess)
+
+        assert execution_dict == {'job_id': '123', 'layer_name': 'geonode:layername', 'job_status': 'DOWNLOAD-SUCCESSFUL',
+                                  'timestamp_job_start': datetime(2021, 8, 17), 'timestamp_job_end': datetime(2021, 8, 18),
+                                  'continue_process': False, 'log_file_path': Path.cwd() / 'wps-log.csv',
+                                  'total_job_duration': 1440.0}
+
+
+class TestSubmitWpsQueue():
+    @responses.activate
+    def test_successful_post_return_correct_execution_dict(self, mocker):
+        self.mock_mod_xml = mocker.patch('eodslib.mod_the_xml')
+        self.mock_mod_xml.return_value = None
+
+        self.mock_datetime = mocker.patch('eodslib.datetime')
+        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
+
+        url = 'https://domain'
+
+        config_wpsprocess = {
+            'xml_config': {
+                'template_layer_name': 'layername',
+            },
+        }
+
+        request_config = {
+            'wps_server': 'https://domain',
+            'access_token': 'token',
+            'headers': {'header': 'a_header'},
+            'verify': 'verify'
+        }
+
+        responses.add(responses.POST, url, status=200,
+                      body='Body executionId=123')
+
+        response = eodslib.submit_wps_queue(request_config, config_wpsprocess)
+
+        assert response == {'job_id': '123', 'layer_name': 'layername', 'timestamp_job_start': datetime(
+            2021, 8, 17, 0, 0), 'continue_process': True}
+
+
+class TestPollApiStatus():
+    @responses.activate
+    def test_successful_post_return_correct_execution_dict(self, mocker):
+        self.mock_datetime = mocker.patch('eodslib.datetime')
+        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
+
+        self.mock_get = mocker.patch('eodslib.requests.get')
+        self.mock_get.return_value.content = bytes(
+            b'<?xml version="1.0" encoding="UTF-8"?><wps:ExecuteResponse xmlns:wps="http://www.opengis.net/wps/1.0.0"><wps:Status><wps:ProcessSucceeded></wps:ProcessSucceeded></wps:Status><wps:ProcessOutputs><wps:Output><wps:Reference href="href" mimeType="mime"/></wps:Output></wps:ProcessOutputs></wps:ExecuteResponse>'
+        )
+
+        self.mock_download_single = mocker.patch('eodslib.download_wps_result_single')
+        def side_effect_fn(*args, **kwargs):
+            execution_dict = args[1]
+            return execution_dict
+
+        self.mock_download_single.side_effect = side_effect_fn
+
+        
+
+        request_config = {
+            'wps_server': 'https://domain',
+            'access_token': 'token',
+            'headers': {'header': 'a_header'},
+            'verify': 'verify'
+        }
+
+        path_output = Path.cwd()
+
+        execution_dict = {'job_id': '123', 'layer_name': 'layername', 'timestamp_job_start': datetime(
+            2021, 8, 17, 0, 0), 'continue_process': True}
+
+        execution_dict = eodslib.poll_api_status(
+            execution_dict, request_config, path_output)
+
+        expected_execution_dict = {'job_id': '123', 'layer_name': 'layername',
+                                   'timestamp_job_start': datetime(2021, 8, 17, 0, 0),
+                                   'continue_process': True,
+                                   'dl_url': 'href&access_token=token',
+                                   'job_status': 'READY-TO-DOWNLOAD',
+                                   'mime_type': 'mime',
+                                   'timestamp_ready_to_dl': datetime(2021, 8, 17, 0, 0)}
+
+        assert execution_dict == expected_execution_dict
