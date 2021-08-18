@@ -1,4 +1,4 @@
-from pathlib import Path
+from pathlib import Path, PosixPath
 import eodslib
 import os
 import pytest
@@ -9,6 +9,7 @@ import logging
 import pandas as pd
 import numpy as np
 from datetime import datetime
+from zipfile import ZipInfo
 
 
 class TestPostLayerGroupAPI():
@@ -1186,7 +1187,7 @@ class TestSubmitWpsQueue():
 
 class TestPollApiStatus():
     @responses.activate
-    def test_successful_post_return_correct_execution_dict(self, mocker):
+    def test_successful_get_return_correct_execution_dict(self, mocker):
         self.mock_datetime = mocker.patch('eodslib.datetime')
         self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
 
@@ -1195,14 +1196,14 @@ class TestPollApiStatus():
             b'<?xml version="1.0" encoding="UTF-8"?><wps:ExecuteResponse xmlns:wps="http://www.opengis.net/wps/1.0.0"><wps:Status><wps:ProcessSucceeded></wps:ProcessSucceeded></wps:Status><wps:ProcessOutputs><wps:Output><wps:Reference href="href" mimeType="mime"/></wps:Output></wps:ProcessOutputs></wps:ExecuteResponse>'
         )
 
-        self.mock_download_single = mocker.patch('eodslib.download_wps_result_single')
+        self.mock_download_single = mocker.patch(
+            'eodslib.download_wps_result_single')
+
         def side_effect_fn(*args, **kwargs):
             execution_dict = args[1]
             return execution_dict
 
         self.mock_download_single.side_effect = side_effect_fn
-
-        
 
         request_config = {
             'wps_server': 'https://domain',
@@ -1228,3 +1229,162 @@ class TestPollApiStatus():
                                    'timestamp_ready_to_dl': datetime(2021, 8, 17, 0, 0)}
 
         assert execution_dict == expected_execution_dict
+
+
+class TestDownloadWpsResultSingle():
+    def test_successful_get_return_correct_execution_dict(self, mocker):
+        self.mock_datetime = mocker.patch('eodslib.datetime')
+        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
+
+        self.mock_mkdir = mocker.patch('eodslib.Path.mkdir')
+        self.mock_mkdir.return_value = None
+
+        self.mock_get = mocker.patch('eodslib.requests.get')
+        self.mock_get.return_value.__enter__.return_value.iter_content.return_value = [
+            'te', 'st']
+
+        self.mock_open = mocker.patch(
+            'builtins.open', mocker.mock_open(read_data="['testest']"))
+
+        request_config = {
+            'wps_server': 'https://domain',
+            'headers': {'header': 'a_header'},
+            'verify': 'verify'
+        }
+
+        execution_dict = {'job_id': '123', 'layer_name': 'geonode:layername',
+                          'timestamp_job_start': datetime(2021, 8, 17, 0, 0),
+                          'continue_process': True,
+                          'mime_type': '/mime',
+                          'dl_url': 'href&access_token=token'}
+
+        execution_dict = eodslib.download_wps_result_single(
+            request_config, execution_dict, Path.cwd())
+
+        expected_execution_dict = {'job_id': '123', 'layer_name': 'geonode:layername',
+                                   'timestamp_job_start': datetime(2021, 8, 17, 0, 0),
+                                   'continue_process': False,
+                                   'dl_url': 'href&access_token=token',
+                                   'job_status': 'DOWNLOAD-SUCCESSFUL',
+                                   'mime_type': '/mime',
+                                   'dl_file': Path.cwd() / 'layername' / 'layername.mime',
+                                   'file_extension': '.mime',
+                                   'filename_stub': 'layername',
+                                   'timestamp_dl_end': datetime(2021, 8, 17, 0, 0),
+                                   'timestamp_job_end': datetime(2021, 8, 17, 0, 0),
+                                   'download_try': 1}
+
+        assert execution_dict == expected_execution_dict
+
+    def test_successful_get_correct_write_download(self, mocker):
+        self.mock_datetime = mocker.patch('eodslib.datetime')
+        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
+
+        self.mock_mkdir = mocker.patch('eodslib.Path.mkdir')
+        self.mock_mkdir.return_value = None
+
+        self.mock_get = mocker.patch('eodslib.requests.get')
+        self.mock_get.return_value.__enter__.return_value.iter_content.return_value = [
+            'te', 'st']
+
+        self.mock_open = mocker.patch(
+            'builtins.open', mocker.mock_open())
+
+        request_config = {
+            'wps_server': 'https://domain',
+            'headers': {'header': 'a_header'},
+            'verify': 'verify'
+        }
+
+        execution_dict = {'job_id': '123', 'layer_name': 'geonode:layername',
+                          'timestamp_job_start': datetime(2021, 8, 17, 0, 0),
+                          'continue_process': True,
+                          'mime_type': '/mime',
+                          'dl_url': 'href&access_token=token'}
+
+        eodslib.download_wps_result_single(
+            request_config, execution_dict, Path.cwd()
+        )
+
+        calls = [
+            mocker.call.__enter__(),
+            mocker.call.write('te'),
+            mocker.call.write('st'),
+            mocker.call.__exit__(None, None, None)]
+
+        handle = self.mock_open()
+        handle.assert_has_calls(calls)
+
+
+class TestProcessWpsDownloadedFiles():
+    def test_successful_get_return_correct_execution_dict(self, mocker):
+        self.mock_datetime = mocker.patch('eodslib.datetime')
+        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
+
+        self.mock_zip = mocker.patch('eodslib.ZipFile')
+
+        class zipmock():
+            def __init__(self):
+                info = ZipInfo(filename='alphanumstr.tiff')
+                info.file_size = 1
+                info.compress_size = 1
+                self.filelist = [info]
+
+            def __call__(self):
+                return None
+
+            def extractall(self, _):
+                return None
+
+            def close(self):
+                return None
+
+        self.mock_zip.return_value = zipmock()
+
+        self.mock_unlink = mocker.patch.object(PosixPath, 'unlink')
+        self.mock_replace = mocker.patch.object(PosixPath, 'replace')
+
+        execution_dict = {'job_id': '123',
+                          'dl_file': PosixPath('source/parent/filename.zip'),
+                          'filename_stub': 'layername'}
+
+        # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z/keep_api_test_create_group/keep_api_test_create_group.zip
+        # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z/keep_api_test_create_group
+        # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z
+        # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z/ef5b64d1-df19-4365-b735-54ce35cf95e2.tiff
+        # keep_api_test_create_group
+        # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z/keep_api_test_create_group.tiff
+
+        execution_dict = eodslib.process_wps_downloaded_files(execution_dict)
+
+        expected_execution_dict = {'job_id': '123',
+                                   'job_status': 'LOCAL-POST-PROCESSING-SUCCESSFUL',
+                                   'dl_file': PosixPath('source/parent/filename.zip'),
+                                   'filename_stub': 'layername',
+                                   'timestamp_extraction_end': datetime(2021, 8, 17, 0, 0),
+                                   'timestamp_job_end': datetime(2021, 8, 17, 0, 0),
+                                   }
+
+        assert execution_dict == expected_execution_dict
+
+class TestOutputLog():
+    def test_successful_get_return_correct_execution_dict(self, mocker):
+        self.mock_datetime = mocker.patch('eodslib.datetime')
+        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
+
+        self.mock_to_csv = mocker.patch.object(pd.DataFrame, 'to_csv')
+
+        list_of_result = [{'log_file_path':Path.cwd()}]
+
+        # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z/keep_api_test_create_group/keep_api_test_create_group.zip
+        # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z/keep_api_test_create_group
+        # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z
+        # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z/ef5b64d1-df19-4365-b735-54ce35cf95e2.tiff
+        # keep_api_test_create_group
+        # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z/keep_api_test_create_group.tiff
+
+        eodslib.output_log(list_of_result)
+
+        self.mock_to_csv.assert_called_once_with(Path.cwd(), index_label='num')
+
+    #using PosixPath - work for Linux??

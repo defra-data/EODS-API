@@ -260,7 +260,7 @@ def download_wps_result_single(request_config, execution_dict, path_output):
     file_extension = '.' + execution_dict['mime_type'].split('/')[1]
     filename_stub = execution_dict['layer_name'].split(':')[-1]
     dl_path = path_output / filename_stub
-    dl_path.mkdir(parents=True, exist_ok=True)        
+    dl_path.mkdir(parents=True, exist_ok=True)
     local_file_name = Path(dl_path / str( filename_stub + file_extension))
 
     # make three download attempts
@@ -275,7 +275,7 @@ def download_wps_result_single(request_config, execution_dict, path_output):
                 headers=request_config['headers'],
                 verify=request_config['verify'],
                 stream=True) as response:
-                 
+                
                 with open(local_file_name, 'wb') as f:
                     for chunk in response.iter_content(chunk_size=8192*1024):
                         f.write(chunk)
