@@ -1341,11 +1341,11 @@ class TestProcessWpsDownloadedFiles():
 
         self.mock_zip.return_value = zipmock()
 
-        self.mock_unlink = mocker.patch.object(PosixPath, 'unlink')
-        self.mock_replace = mocker.patch.object(PosixPath, 'replace')
+        self.mock_unlink = mocker.patch.object(Path, 'unlink')
+        self.mock_replace = mocker.patch.object(Path, 'replace')
 
         execution_dict = {'job_id': '123',
-                          'dl_file': PosixPath('source/parent/filename.zip'),
+                          'dl_file': Path('source/parent/filename.zip'),
                           'filename_stub': 'layername'}
 
         # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z/keep_api_test_create_group/keep_api_test_create_group.zip
@@ -1359,7 +1359,7 @@ class TestProcessWpsDownloadedFiles():
 
         expected_execution_dict = {'job_id': '123',
                                    'job_status': 'LOCAL-POST-PROCESSING-SUCCESSFUL',
-                                   'dl_file': PosixPath('source/parent/filename.zip'),
+                                   'dl_file': Path('source/parent/filename.zip'),
                                    'filename_stub': 'layername',
                                    'timestamp_extraction_end': datetime(2021, 8, 17, 0, 0),
                                    'timestamp_job_end': datetime(2021, 8, 17, 0, 0),
@@ -1376,15 +1376,6 @@ class TestOutputLog():
 
         list_of_result = [{'log_file_path':Path.cwd()}]
 
-        # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z/keep_api_test_create_group/keep_api_test_create_group.zip
-        # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z/keep_api_test_create_group
-        # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z
-        # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z/ef5b64d1-df19-4365-b735-54ce35cf95e2.tiff
-        # keep_api_test_create_group
-        # /mnt/c/Users/henry.wild/repos/EODS/eodslib/EODS-API/tests/output/2021-08-18T151428Z/keep_api_test_create_group.tiff
-
         eodslib.output_log(list_of_result)
 
         self.mock_to_csv.assert_called_once_with(Path.cwd(), index_label='num')
-
-    #using PosixPath - work for Linux??
