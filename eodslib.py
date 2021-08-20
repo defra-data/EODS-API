@@ -547,7 +547,7 @@ def query_catalog(conn, **kwargs):
     elif 'start_date' not in kwargs and 'end_date' in kwargs:
         raise ValueError("QUERY failed, if querying by date, please specify *BOTH* 'start_date' and 'end_date'")
     elif 'start_date' in kwargs and 'end_date' in kwargs:
-        params.update({'date__range': kwargs['start_date'] + ' 00:00,' + kwargs['end_date'] + ' 00:00'})
+        params.update({'date__range': kwargs['start_date'] + ' 00:00,' + kwargs['end_date'] + ' 23:59'})
     
     if 'title' in kwargs:
         params.update({'q': kwargs['title']})
