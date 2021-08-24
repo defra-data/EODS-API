@@ -533,7 +533,7 @@ def query_catalog(conn, **kwargs):
         kwargs['verify'] = True
 
     if 'sat_id' in kwargs and 'find_least_cloud' in kwargs:
-        if kwargs['sat_id'] == 1:            
+        if kwargs['sat_id'] == 1 and kwargs['find_least_cloud'] == True:            
             # throw an error if user specifies an s2 custom function with s1
             raise ValueError("QUERY failed, you have specified 'sat_id'=1 and 'find_least_cloud'=True. Use 'sat_id'=2 and 'find_least_cloud'=True")
     
@@ -563,8 +563,13 @@ def query_catalog(conn, **kwargs):
         if kwargs['sat_id'] == 1:
             raise ValueError("QUERY failed, if querying by cloud cover, please specify 'sat_id'=2")
         elif kwargs['sat_id'] == 2:
-            params.update({'cc_min': kwargs['cloud_min']})
-            params.update({'cc_max': kwargs['cloud_max']})            
+            if 'find_least_cloud' not in kwargs:
+                params.update({'cc_min': kwargs['cloud_min']})
+                params.update({'cc_max': kwargs['cloud_max']})
+            elif kwargs['find_least_cloud'] != True:
+                params.update({'cc_min': kwargs['cloud_min']})
+                params.update({'cc_max': kwargs['cloud_max']})
+   
 
     try:
         response = requests.get(
@@ -607,6 +612,14 @@ def query_catalog(conn, **kwargs):
                                 float))/2).astype(str), df['ARCSI_CLOUD_COVER'])
 
                             df['split_cloud_cover'] = split_cloud_cover
+
+                            if 'cloud_min' in kwargs and 'cloud_max' in kwargs:
+                                # print(df['split_cloud_cover'].astype(float).min())
+                                df = df[df['split_cloud_cover'].astype(float)*100 >= kwargs['cloud_min']]
+                                # print(df['split_cloud_cover'].astype(float).min())
+                                # print(df['split_cloud_cover'].astype(float).max())
+                                df = df[df['split_cloud_cover'].astype(float)*100 <= kwargs['cloud_max']]
+                                # print(df['split_cloud_cover'].astype(float).max())
                         
                         else:
                             df['split_cloud_cover'] = df['ARCSI_CLOUD_COVER']
