@@ -94,7 +94,7 @@ def run_wps(conn, config_wpsprocess, **kwargs):
     else:
 
         # INITIALISE VARIABLES and drop the wps log file if it exists
-        path_output = make_output_dir(kwargs['output_dir'])        
+        path_output = make_output_dir(kwargs['output_dir'])
 
 
         # keep calling the wps job status until 'continue_process' = False 
