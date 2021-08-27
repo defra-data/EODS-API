@@ -11,6 +11,8 @@ import numpy as np
 from datetime import datetime
 from zipfile import ZipInfo
 
+def return_first_arg_side_effect_fn(*args, **kwargs):
+        return args[0]
 
 class TestPostLayerGroupAPI():
     def test_single_layer_handles_json_response(self, mocker):
@@ -178,20 +180,21 @@ class TestPostLayerGroupAPI():
 
 
 class TestCreateLayerGroup():
-    def test_correct_param_input_returns_response_json(self, mocker):
+    @pytest.fixture(autouse=True, scope='function')
+    def setup(self, mocker):
         self.mock_post = mocker.patch('eodslib.post_to_layer_group_api')
         self.mock_post.return_value = 'mock response json'
-
-        conn = {
+        self.conn = {
             'domain': 'domainname',
             'username': 'username',
             'access_token': 'token',
         }
 
+    def test_correct_param_input_returns_response_json(self, mocker):
         list_of_layers = ['keep_api_test_create_group']
 
         response_json = eodslib.create_layer_group(
-            conn,
+            self.conn,
             list_of_layers,
             'eodslib-create-layer-test-',
             abstract='some description of the layer group '
@@ -202,20 +205,11 @@ class TestCreateLayerGroup():
         assert response_json == 'mock response json'
 
     def test_list_of_layers_not_list_triggers_exception(self, mocker):
-        self.mock_post = mocker.patch('eodslib.post_to_layer_group_api')
-        self.mock_post.return_value = 'mock response json'
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
         list_of_layers = 'badstr'
 
         with pytest.raises(TypeError) as error:
             eodslib.create_layer_group(
-                conn,
+                self.conn,
                 list_of_layers,
                 'eodslib-create-layer-test-',
                 abstract='some description of the layer group '
@@ -225,20 +219,11 @@ class TestCreateLayerGroup():
         mocker.resetall()
 
     def test_name_not_str_triggers_exception(self, mocker):
-        self.mock_post = mocker.patch('eodslib.post_to_layer_group_api')
-        self.mock_post.return_value = 'mock response json'
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
         list_of_layers = ['keep_api_test_create_group']
 
         with pytest.raises(TypeError) as error:
             eodslib.create_layer_group(
-                conn,
+                self.conn,
                 list_of_layers,
                 ['eodslib-create-layer-test-'],
                 abstract='some description of the layer group '
@@ -248,20 +233,11 @@ class TestCreateLayerGroup():
         mocker.resetall()
 
     def test_list_of_layers_empty_triggers_exception(self, mocker):
-        self.mock_post = mocker.patch('eodslib.post_to_layer_group_api')
-        self.mock_post.return_value = 'mock response json'
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
         list_of_layers = []
 
         with pytest.raises(ValueError) as error:
             eodslib.create_layer_group(
-                conn,
+                self.conn,
                 list_of_layers,
                 'eodslib-create-layer-test-',
                 abstract='some description of the layer group '
@@ -271,20 +247,11 @@ class TestCreateLayerGroup():
         mocker.resetall()
 
     def test_name_empty_triggers_exception(self, mocker):
-        self.mock_post = mocker.patch('eodslib.post_to_layer_group_api')
-        self.mock_post.return_value = 'mock response json'
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
         list_of_layers = ['keep_api_test_create_group']
 
         with pytest.raises(ValueError) as error:
             eodslib.create_layer_group(
-                conn,
+                self.conn,
                 list_of_layers,
                 '',
                 abstract='some description of the layer group '
@@ -295,20 +262,21 @@ class TestCreateLayerGroup():
 
 
 class TestModifyLayerGroup():
-    def test_correct_param_input_returns_response_json(self, mocker):
+    @pytest.fixture(autouse=True, scope='function')
+    def setup(self, mocker):
         self.mock_post = mocker.patch('eodslib.post_to_layer_group_api')
         self.mock_post.return_value = 'mock response json'
-
-        conn = {
+        self.conn = {
             'domain': 'domainname',
             'username': 'username',
             'access_token': 'token',
         }
 
+    def test_correct_param_input_returns_response_json(self, mocker):
         list_of_layers = ['keep_api_test_create_group']
 
         response_json = eodslib.modify_layer_group(
-            conn,
+            self.conn,
             list_of_layers,
             0,
             abstract='update the abstract '
@@ -318,20 +286,11 @@ class TestModifyLayerGroup():
         assert response_json == 'mock response json'
 
     def test_list_of_layers_not_list_triggers_exception(self, mocker):
-        self.mock_post = mocker.patch('eodslib.post_to_layer_group_api')
-        self.mock_post.return_value = 'mock response json'
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
         list_of_layers = 'badstr'
 
         with pytest.raises(TypeError) as error:
             eodslib.modify_layer_group(
-                conn,
+                self.conn,
                 list_of_layers,
                 0,
                 abstract='update the abstract '
@@ -341,20 +300,11 @@ class TestModifyLayerGroup():
         mocker.resetall()
 
     def test_id_not_int_triggers_exception(self, mocker):
-        self.mock_post = mocker.patch('eodslib.post_to_layer_group_api')
-        self.mock_post.return_value = 'mock response json'
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
         list_of_layers = ['keep_api_test_create_group']
 
         with pytest.raises(TypeError) as error:
             eodslib.modify_layer_group(
-                conn,
+                self.conn,
                 list_of_layers,
                 'badID',
                 abstract='update the abstract '
@@ -364,20 +314,11 @@ class TestModifyLayerGroup():
         mocker.resetall()
 
     def test_list_of_layers_empty_triggers_exception(self, mocker):
-        self.mock_post = mocker.patch('eodslib.post_to_layer_group_api')
-        self.mock_post.return_value = 'mock response json'
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
         list_of_layers = []
 
         with pytest.raises(ValueError) as error:
             eodslib.modify_layer_group(
-                conn,
+                self.conn,
                 list_of_layers,
                 0,
                 abstract='update the abstract '
@@ -424,13 +365,16 @@ class TestGetBboxCornersFromWkt():
 
 
 class TestFindMinimumCloudList():
-    def test_components_and_average_less_than_full_granule_return_both_splits(self, mocker):
-        # S2A_date_lat1lon2_T12ABC_ORB034_etc = 0.05, S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc = 0.1, S2A_date_lat1lon2_T12ABC_ORB034_fullgran = 0.12
+    @pytest.fixture(autouse=True, scope='function')
+    def setup(self, mocker):
         self.mock_path_exists = mocker.patch('eodslib.Path.exists')
         self.mock_path_exists.return_value = True
         self.mock_read_csv = mocker.patch('eodslib.pd.read_csv')
         self.mock_read_csv.return_value = pd.DataFrame(
             data={'gran-orb': ['T12ABC_ORB034']})
+
+    def test_components_and_average_less_than_full_granule_return_both_splits(self, mocker):
+        # S2A_date_lat1lon2_T12ABC_ORB034_etc = 0.05, S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc = 0.1, S2A_date_lat1lon2_T12ABC_ORB034_fullgran = 0.12
         df = pd.DataFrame(np.array([['S2A_date_lat1lon2_T12ABC_ORB034_etc', 'geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc', 'T12ABC', 'ORB034', '0.05', 'geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc', '0.1', '0.075'],
                                     ['S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc', 'geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc',
                                         'T12ABCSPLIT1', 'ORB034', '0.1', 'geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc', '0.05', '0.075'],
@@ -457,11 +401,6 @@ class TestFindMinimumCloudList():
 
     def test_component_greater_but_average_less_than_full_granule_return_both_splits(self, mocker):
         # S2A_date_lat1lon2_T12ABC_ORB034_etc = 0.2, S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc = 0.05, S2A_date_lat1lon2_T12ABC_ORB034_fullgran = 0.19
-        self.mock_path_exists = mocker.patch('eodslib.Path.exists')
-        self.mock_path_exists.return_value = True
-        self.mock_read_csv = mocker.patch('eodslib.pd.read_csv')
-        self.mock_read_csv.return_value = pd.DataFrame(
-            data={'gran-orb': ['T12ABC_ORB034']})
         df = pd.DataFrame(np.array([['S2A_date_lat1lon2_T12ABC_ORB034_etc', 'geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc', 'T12ABC', 'ORB034', '0.2', 'geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc', '0.05', '0.125'],
                                     ['S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc', 'geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc',
                                         'T12ABCSPLIT1', 'ORB034', '0.05', 'geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc', '0.2', '0.125'],
@@ -488,11 +427,6 @@ class TestFindMinimumCloudList():
 
     def test_components_and_average_greater_than_full_granule_return_full_gran(self, mocker):
         # S2A_date_lat1lon2_T12ABC_ORB034_etc = 0.15, S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc = 0.2, S2A_date_lat1lon2_T12ABC_ORB034_fullgran = 0.1
-        self.mock_path_exists = mocker.patch('eodslib.Path.exists')
-        self.mock_path_exists.return_value = True
-        self.mock_read_csv = mocker.patch('eodslib.pd.read_csv')
-        self.mock_read_csv.return_value = pd.DataFrame(
-            data={'gran-orb': ['T12ABC_ORB034']})
         df = pd.DataFrame(np.array([['S2A_date_lat1lon2_T12ABC_ORB034_etc', 'geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc', 'T12ABC', 'ORB034', '0.15', 'geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc', '0.2', '0.175'],
                                     ['S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc', 'geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc',
                                         'T12ABCSPLIT1', 'ORB034', '0.2', 'geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc', '0.15', '0.175'],
@@ -516,9 +450,6 @@ class TestFindMinimumCloudList():
         assert response_difference.empty
 
     def test_no_layers_match_safe_list_trigger_exception(self, mocker):
-        self.mock_path_exists = mocker.patch('eodslib.Path.exists')
-        self.mock_path_exists.return_value = True
-        self.mock_read_csv = mocker.patch('eodslib.pd.read_csv')
         self.mock_read_csv.return_value = pd.DataFrame(
             data={'gran-orb': ['badref']})
         df = pd.DataFrame(np.array([['S2A_date_lat1lon2_T12ABC_ORB034_etc', 'geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc', 'T12ABC', 'ORB034', '0.15', 'geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc', '0.2', '0.175'],
@@ -535,7 +466,6 @@ class TestFindMinimumCloudList():
         assert error.value.args[0] == 'ERROR : You have selected find_least_cloud=True BUT your search criteria is too narrow, spatially or temporally and did not match any granule references in "./static/safe-granule-orbit-list.txt". Suggest widening your search'
 
     def test_no_safe_list_found_trigger_exception(self, mocker):
-        self.mock_path_exists = mocker.patch('eodslib.Path.exists')
         self.mock_path_exists.return_value = False
         df = pd.DataFrame(np.array([['S2A_date_lat1lon2_T12ABC_ORB034_etc', 'geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc', 'T12ABC', 'ORB034', '0.15', 'geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc', '0.2', '0.175'],
                                     ['S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc', 'geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc',
@@ -554,32 +484,40 @@ class TestFindMinimumCloudList():
 
 
 class TestQueryCatalog():
-    def test_successful_query_return_correct_list_and_df(self, mocker):
+    @pytest.fixture(autouse=True, scope='function')
+    def setup(self, mocker):
         self.mock_get = mocker.patch('eodslib.requests.get')
         self.mock_get.return_value.status_code = 200
         self.mock_get.return_value.content = bytes(
-            b'{"meta": {"total_count": 1}, "objects": [{"alternate":"geonode:layername"}]}')
+            b'{"meta": {"total_count": 1}}')
+        self.mock_get.return_value.url = 'testurl'
 
         self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
         self.mock_make_output_dir.return_value = Path.cwd()
 
         self.mock_df_to_csv = mocker.patch('eodslib.pd.DataFrame.to_csv')
-        self.mock_df_to_csv = None
+        self.mock_df_to_csv.return_value = None
 
-        conn = {
+        self.mock_datetime = mocker.patch('eodslib.datetime')
+        self.mock_datetime.utcnow.return_value.isoformat.return_value = 'timestamp'
+
+        self.conn = {
             'domain': 'domainname',
             'username': 'username',
             'access_token': 'token',
         }
 
+    def test_successful_query_return_correct_list_and_df(self, mocker):
+        self.mock_get.return_value.content = bytes(
+            b'{"meta": {"total_count": 1}, "objects": [{"alternate":"geonode:layername"}]}')
+
         eods_params = {
             'title': 'keep_api_test_create_group',
         }
 
-        output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
+        output_list, filtered_df = eodslib.query_catalog(self.conn, **eods_params)
 
-        expected_output_list = [
-            'geonode:layername']
+        expected_output_list = ['geonode:layername']
         expected_filtered_df = pd.DataFrame(np.array(
             [["geonode:layername"]]),
             columns=["alternate"])
@@ -597,93 +535,57 @@ class TestQueryCatalog():
         assert output_list_bool and filtered_df_bool
 
     def test_find_least_cloud_sat_id_1_trigger_exception(self):
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
         eods_params = {
             'title': 'keep_api_test_create_group',
             'sat_id': 1,
             'find_least_cloud': True
         }
         with pytest.raises(ValueError) as error:
-            eodslib.query_catalog(conn, **eods_params)
+            eodslib.query_catalog(self.conn, **eods_params)
 
         assert error.value.args[0] == "QUERY failed, you have specified 'sat_id'=1 and 'find_least_cloud'=True. Use 'sat_id'=2 and 'find_least_cloud'=True"
 
     def test_start_date_no_end_date_trigger_exception(self):
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
         eods_params = {
             'title': 'keep_api_test_create_group',
             'start_date': '2020-01-01'
         }
         with pytest.raises(ValueError) as error:
-            eodslib.query_catalog(conn, **eods_params)
+            eodslib.query_catalog(self.conn, **eods_params)
 
         assert error.value.args[0] == "QUERY failed, if querying by date, please specify *BOTH* 'start_date' and 'end_date'"
 
     def test_end_date_no_start_date_trigger_exception(self):
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
         eods_params = {
             'title': 'keep_api_test_create_group',
             'end_date': '2020-01-01'
         }
         with pytest.raises(ValueError) as error:
-            eodslib.query_catalog(conn, **eods_params)
+            eodslib.query_catalog(self.conn, **eods_params)
 
         assert error.value.args[0] == "QUERY failed, if querying by date, please specify *BOTH* 'start_date' and 'end_date'"
 
     def test_cloud_min_no_cloud_max_trigger_exception(self):
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
         eods_params = {
             'title': 'keep_api_test_create_group',
             'cloud_min': 1
         }
         with pytest.raises(ValueError) as error:
-            eodslib.query_catalog(conn, **eods_params)
+            eodslib.query_catalog(self.conn, **eods_params)
 
         assert error.value.args[0] == "QUERY failed, if querying by cloud cover, please specify *BOTH* 'cloud_min' and 'cloud_max'"
 
     def test_cloud_max_no_cloud_min_trigger_exception(self):
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
         eods_params = {
             'title': 'keep_api_test_create_group',
             'cloud_max': 1
         }
         with pytest.raises(ValueError) as error:
-            eodslib.query_catalog(conn, **eods_params)
+            eodslib.query_catalog(self.conn, **eods_params)
 
         assert error.value.args[0] == "QUERY failed, if querying by cloud cover, please specify *BOTH* 'cloud_min' and 'cloud_max'"
 
     def test_cloud_min_cloud_max_and_sat_id_1_trigger_exception(self):
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
         eods_params = {
             'title': 'keep_api_test_create_group',
             'cloud_min': 1,
@@ -691,27 +593,19 @@ class TestQueryCatalog():
             'sat_id': 1
         }
         with pytest.raises(ValueError) as error:
-            eodslib.query_catalog(conn, **eods_params)
+            eodslib.query_catalog(self.conn, **eods_params)
 
         assert error.value.args[0] == "QUERY failed, if querying by cloud cover, please specify 'sat_id'=2"
 
     def test_json_response_meta_total_count_0_return_empty_list_none_df(self, mocker):
-        self.mock_get = mocker.patch('eodslib.requests.get')
-        self.mock_get.return_value.status_code = 200
         self.mock_get.return_value.content = bytes(
             b'{"meta": {"total_count": 0}}')
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
 
         eods_params = {
             'title': 'keep_api_test_create_group',
         }
 
-        output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
+        output_list, filtered_df = eodslib.query_catalog(self.conn, **eods_params)
 
         expected_output_list = []
         expected_filtered_df = None
@@ -724,24 +618,13 @@ class TestQueryCatalog():
         assert output_list_bool and filtered_df_bool
 
     def test_non_200_status_trigger_exception(self, mocker):
-        self.mock_get = mocker.patch('eodslib.requests.get')
         self.mock_get.return_value.status_code = 400
-        self.mock_get.return_value.content = bytes(b'{"a":"b"}')
-        self.mock_get.return_value.url = 'testurl'
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value.isoformat.return_value = 'timestamp'
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
 
         eods_params = {
             'title': 'keep_api_test_create_group',
         }
         with pytest.raises(ValueError) as error:
-            eodslib.query_catalog(conn, **eods_params)
+            eodslib.query_catalog(self.conn, **eods_params)
 
         expected_error = 'timestamp' + ' :: RESPONSE STATUS = ' + \
             str(self.mock_get.return_value.status_code) + ' (NOT SUCCESSFUL)' + \
@@ -753,23 +636,14 @@ class TestQueryCatalog():
         assert error.value.args[0] == expected_error
 
     def test_request_exception_triggered_return_none_prints_error(self, mocker, capsys):
-        self.mock_get = mocker.patch('eodslib.requests.get')
         self.mock_get.side_effect = requests.exceptions.RequestException(
             'test error message')
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value.isoformat.return_value = 'timestamp'
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
 
         eods_params = {
             'title': 'keep_api_test_create_group',
         }
 
-        eodslib.query_catalog(conn, **eods_params)
+        eodslib.query_catalog(self.conn, **eods_params)
 
         captured_out = capsys.readouterr().out
         trim_out = captured_out.strip('\n')
@@ -782,41 +656,22 @@ class TestQueryCatalog():
         assert error_message == expected_error
 
     def test_sat_id_2_return_correct_list_and_df_with_new_cols(self, mocker):
-        self.mock_get = mocker.patch('eodslib.requests.get')
-        self.mock_get.return_value.status_code = 200
-        self.mock_get.return_value.content = bytes(
-            b'{"meta": {"total_count": 1}}')
-
         self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
         df = pd.DataFrame({'title': "S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
                            "supplemental_information": "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\netc"}, index=[0])
         self.mock_json_normalize.return_value = df
 
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
-        self.mock_make_output_dir.return_value = Path.cwd()
-
-        self.mock_df_to_csv = mocker.patch('eodslib.pd.DataFrame.to_csv')
-        self.mock_df_to_csv = None
-
         self.mock_minimum_cloud = mocker.patch(
             'eodslib.find_minimum_cloud_list')
 
-        def side_effect_fn(*args, **kwargs):
-            return args[0]
-        self.mock_minimum_cloud.side_effect = side_effect_fn
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
+        self.mock_minimum_cloud.side_effect = return_first_arg_side_effect_fn
 
         eods_params = {
             'title': 'keep_api_test_create_group',
             'sat_id': 2
         }
 
-        output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
+        output_list, filtered_df = eodslib.query_catalog(self.conn, **eods_params)
 
         expected_filtered_df = pd.DataFrame({'title': "S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
                                              "supplemental_information": "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\netc",
@@ -837,34 +692,17 @@ class TestQueryCatalog():
         assert output_list_bool and filtered_df_bool
 
     def test_sat_id_not_2_return_correct_list_and_df(self, mocker):
-        self.mock_get = mocker.patch('eodslib.requests.get')
-        self.mock_get.return_value.status_code = 200
-        self.mock_get.return_value.content = bytes(
-            b'{"meta": {"total_count": 1}}')
-
         self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
         df = pd.DataFrame({"alternate": "geonode:layername",
                            }, index=[0])
         self.mock_json_normalize.return_value = df
-
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
-        self.mock_make_output_dir.return_value = Path.cwd()
-
-        self.mock_df_to_csv = mocker.patch('eodslib.pd.DataFrame.to_csv')
-        self.mock_df_to_csv = None
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
 
         eods_params = {
             'title': 'keep_api_test_create_group',
             'sat_id': 1
         }
 
-        output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
+        output_list, filtered_df = eodslib.query_catalog(self.conn, **eods_params)
 
         expected_filtered_df = pd.DataFrame({"alternate": "geonode:layername",
                                              }, index=[0])
@@ -884,27 +722,10 @@ class TestQueryCatalog():
         assert output_list_bool and filtered_df_bool
 
     def test_find_least_cloud_sat_id_not_1_or_2_return_correct_list_and_df(self, mocker):
-        self.mock_get = mocker.patch('eodslib.requests.get')
-        self.mock_get.return_value.status_code = 200
-        self.mock_get.return_value.content = bytes(
-            b'{"meta": {"total_count": 1}}')
-
         self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
         df = pd.DataFrame({"alternate": "geonode:layername",
                            }, index=[0])
         self.mock_json_normalize.return_value = df
-
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
-        self.mock_make_output_dir.return_value = Path.cwd()
-
-        self.mock_df_to_csv = mocker.patch('eodslib.pd.DataFrame.to_csv')
-        self.mock_df_to_csv = None
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
 
         eods_params = {
             'title': 'keep_api_test_create_group',
@@ -912,7 +733,7 @@ class TestQueryCatalog():
             'find_least_cloud': True
         }
 
-        output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
+        output_list, filtered_df = eodslib.query_catalog(self.conn, **eods_params)
 
         expected_filtered_df = pd.DataFrame({"alternate": "geonode:layername",
                                              }, index=[0])
@@ -932,27 +753,10 @@ class TestQueryCatalog():
         assert output_list_bool and filtered_df_bool
 
     def test_find_least_cloud_false_sat_id_2_return_correct_list_and_df_with_new_cols(self, mocker):
-        self.mock_get = mocker.patch('eodslib.requests.get')
-        self.mock_get.return_value.status_code = 200
-        self.mock_get.return_value.content = bytes(
-            b'{"meta": {"total_count": 1}}')
-
         self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
         df = pd.DataFrame({'title': "S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
                            "supplemental_information": "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\netc"}, index=[0])
         self.mock_json_normalize.return_value = df
-
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
-        self.mock_make_output_dir.return_value = Path.cwd()
-
-        self.mock_df_to_csv = mocker.patch('eodslib.pd.DataFrame.to_csv')
-        self.mock_df_to_csv = None
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
 
         eods_params = {
             'title': 'keep_api_test_create_group',
@@ -960,7 +764,7 @@ class TestQueryCatalog():
             'find_least_cloud': False
         }
 
-        output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
+        output_list, filtered_df = eodslib.query_catalog(self.conn, **eods_params)
 
         expected_filtered_df = pd.DataFrame({'title': "S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
                                              "supplemental_information": "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\netc",
@@ -981,34 +785,14 @@ class TestQueryCatalog():
         assert output_list_bool and filtered_df_bool
 
     def test_find_least_cloud_sat_id_2_fullgran_return_correct_list_and_df_with_new_cols(self, mocker):
-        self.mock_get = mocker.patch('eodslib.requests.get')
-        self.mock_get.return_value.status_code = 200
-        self.mock_get.return_value.content = bytes(
-            b'{"meta": {"total_count": 1}}')
-
         self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
         df = pd.DataFrame({'title': "S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
                            "supplemental_information": "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\netc"}, index=[0])
         self.mock_json_normalize.return_value = df
 
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
-        self.mock_make_output_dir.return_value = Path.cwd()
-
-        self.mock_df_to_csv = mocker.patch('eodslib.pd.DataFrame.to_csv')
-        self.mock_df_to_csv = None
-
         self.mock_minimum_cloud = mocker.patch(
             'eodslib.find_minimum_cloud_list')
-
-        def side_effect_fn(*args, **kwargs):
-            return args[0]
-        self.mock_minimum_cloud.side_effect = side_effect_fn
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
+        self.mock_minimum_cloud.side_effect = return_first_arg_side_effect_fn
 
         eods_params = {
             'title': 'keep_api_test_create_group',
@@ -1016,7 +800,7 @@ class TestQueryCatalog():
             'sat_id': 2
         }
 
-        output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
+        output_list, filtered_df = eodslib.query_catalog(self.conn, **eods_params)
 
         expected_filtered_df = pd.DataFrame({'title': "S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
                                              "supplemental_information": "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\netc",
@@ -1037,11 +821,6 @@ class TestQueryCatalog():
         assert output_list_bool and filtered_df_bool
 
     def test_find_least_cloud_sat_id_2_both_split_gran_components_return_correct_list_and_df_with_new_cols(self, mocker):
-        self.mock_get = mocker.patch('eodslib.requests.get')
-        self.mock_get.return_value.status_code = 200
-        self.mock_get.return_value.content = bytes(
-            b'{"meta": {"total_count": 1}}')
-
         self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
         df = pd.DataFrame({'title': ["S2A_date_lat1lon2_T12ABC_ORB034_etc", "S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc"],
                            "alternate": ["geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc", "geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc"],
@@ -1051,24 +830,10 @@ class TestQueryCatalog():
                            })
         self.mock_json_normalize.return_value = df
 
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
-        self.mock_make_output_dir.return_value = Path.cwd()
-
-        self.mock_df_to_csv = mocker.patch('eodslib.pd.DataFrame.to_csv')
-        self.mock_df_to_csv = None
-
         self.mock_minimum_cloud = mocker.patch(
             'eodslib.find_minimum_cloud_list')
 
-        def side_effect_fn(*args, **kwargs):
-            return args[0]
-        self.mock_minimum_cloud.side_effect = side_effect_fn
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
+        self.mock_minimum_cloud.side_effect = return_first_arg_side_effect_fn
 
         eods_params = {
             'title': 'keep_api_test_create_group',
@@ -1076,7 +841,7 @@ class TestQueryCatalog():
             'sat_id': 2
         }
 
-        output_list, filtered_df = eodslib.query_catalog(conn, **eods_params)
+        output_list, filtered_df = eodslib.query_catalog(self.conn, **eods_params)
 
         expected_filtered_df = pd.DataFrame({'title': ["S2A_date_lat1lon2_T12ABC_ORB034_etc", "S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc"],
                                              "alternate": ["geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc", "geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc"],
