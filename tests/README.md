@@ -19,6 +19,8 @@ API_TOKEN=sometoken
 
 # Running the tests
 
+## Running all tests
+
 In the root repo run this command in your terminal, replacing <env-code> with the three-letter code of the environment you are testing:
 ```bash
 pytest tests/. --env <env-code> -vvv -rA 2>&1 | tee ./tests/output/eodslib_test_output.txt
@@ -30,7 +32,12 @@ If you wish to run this from the tests subdirectory, run this command instead:
 pytest . --env <env-code> -vvv -rA 2>&1 | tee ./output/eodslib_test_output.txt
 ```
 
+## Running just the unit tests
+
+Follow the same steps as for running all tests, but if running from the root replace `tests/.` with  `tests/test_unit.py`, and if running from the tests subdirectory replace `.` with `test_unit.py`
+
 # ToDo
 
+* Refactor unit tests to separate repeated code snippets into setup fixture in class
 * Add tests for find_minimum_cloud_list & query_catlog for when split with missing counterpart eg due to geometry search
-* Add tests for wps fns along with mod_the_xml, output_log, and make_output_dir
+* Add end-to-end tests for wps fns along with mod_the_xml, output_log, and make_output_dir?
