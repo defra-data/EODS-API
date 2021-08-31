@@ -12,7 +12,10 @@ from datetime import datetime
 from zipfile import ZipInfo
 
 def return_first_arg_side_effect_fn(*args, **kwargs):
-        return args[0]
+    return args[0]
+
+def return_second_arg_side_effect_fn(*args, **kwargs):
+    return args[1]
 
 class TestPostLayerGroupAPI():
     def test_single_layer_handles_json_response(self, mocker):
@@ -1039,63 +1042,43 @@ class TestRunWps():
 
 
 class TestSubmitWpsQueue():
-    @responses.activate
-    def test_successful_post_return_correct_execution_dict(self, mocker):
+    @pytest.fixture(autouse=True, scope='function')
+    def setup(self, mocker):
         self.mock_mod_xml = mocker.patch('eodslib.mod_the_xml')
         self.mock_mod_xml.return_value = None
 
         self.mock_datetime = mocker.patch('eodslib.datetime')
         self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
 
-        url = 'https://domain'
+        self.url = 'https://domain'
 
-        config_wpsprocess = {
+        self.config_wpsprocess = {
             'xml_config': {
                 'template_layer_name': 'layername',
             },
         }
 
-        request_config = {
-            'wps_server': url,
+        self.request_config = {
+            'wps_server': self.url,
             'access_token': 'token',
             'headers': {'header': 'a_header'},
             'verify': 'verify'
         }
-
-        responses.add(responses.POST, url, status=200,
+    @responses.activate
+    def test_successful_post_return_correct_execution_dict(self, mocker):
+        responses.add(responses.POST, self.url, status=200,
                       body='Body executionId=123')
 
-        response = eodslib.submit_wps_queue(request_config, config_wpsprocess)
+        response = eodslib.submit_wps_queue(self.request_config, self.config_wpsprocess)
 
         assert response == {'job_id': '123', 'layer_name': 'layername', 'timestamp_job_start': datetime(
             2021, 8, 17, 0, 0), 'continue_process': True}
 
     @responses.activate
     def test_raise_for_status_trigger_quiet_exception(self, mocker, capsys):
-        self.mock_mod_xml = mocker.patch('eodslib.mod_the_xml')
-        self.mock_mod_xml.return_value = None
+        responses.add(responses.POST, self.url, status=400)
 
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        url = 'https://domain'
-
-        config_wpsprocess = {
-            'xml_config': {
-                'template_layer_name': 'layername',
-            },
-        }
-
-        request_config = {
-            'wps_server': url,
-            'access_token': 'token',
-            'headers': {'header': 'a_header'},
-            'verify': 'verify'
-        }
-
-        responses.add(responses.POST, url, status=400)
-
-        _ = eodslib.submit_wps_queue(request_config, config_wpsprocess)
+        _ = eodslib.submit_wps_queue(self.request_config, self.config_wpsprocess)
 
         captured = capsys.readouterr()
         expected_error_message = ("\n\t\t### 2021-08-17T00:00:00 :: WPS SUBMISSION :: lyr=layername\n"
@@ -1107,31 +1090,9 @@ class TestSubmitWpsQueue():
 
     @responses.activate
     def test_raise_for_status_return_correct_exception(self, mocker, capsys):
-        self.mock_mod_xml = mocker.patch('eodslib.mod_the_xml')
-        self.mock_mod_xml.return_value = None
+        responses.add(responses.POST, self.url, status=400)
 
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        url = 'https://domain'
-
-        config_wpsprocess = {
-            'xml_config': {
-                'template_layer_name': 'layername',
-            },
-        }
-
-        request_config = {
-            'wps_server': url,
-            'access_token': 'token',
-            'headers': {'header': 'a_header'},
-            'verify': 'verify'
-        }
-
-        responses.add(responses.POST, url, status=400)
-
-        error = eodslib.submit_wps_queue(request_config, config_wpsprocess)
-        print(error)
+        error = eodslib.submit_wps_queue(self.request_config, self.config_wpsprocess)
 
         expected_error_message = ('non-200 response, additional info (MAY CONTAIN SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE)',
                                   '400 Client Error: Bad Request for url: https://domain/?access_token=token&SERVICE=WPS&VERSION=1.0.0&REQUEST=EXECUTE')
@@ -1141,31 +1102,10 @@ class TestSubmitWpsQueue():
 
     @responses.activate
     def test_wps_submission_fail_trigger_quiet_exception(self, mocker, capsys):
-        self.mock_mod_xml = mocker.patch('eodslib.mod_the_xml')
-        self.mock_mod_xml.return_value = None
-
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        url = 'https://domain'
-
-        config_wpsprocess = {
-            'xml_config': {
-                'template_layer_name': 'layername',
-            },
-        }
-
-        request_config = {
-            'wps_server': url,
-            'access_token': 'token',
-            'headers': {'header': 'a_header'},
-            'verify': 'verify'
-        }
-
-        responses.add(responses.POST, url, status=200,
+        responses.add(responses.POST, self.url, status=200,
                       body='Body ExceptionReport executionId=123')
 
-        _ = eodslib.submit_wps_queue(request_config, config_wpsprocess)
+        _ = eodslib.submit_wps_queue(self.request_config, self.config_wpsprocess)
 
         captured = capsys.readouterr()
         expected_error_message = ("\n\t\t### 2021-08-17T00:00:00 :: WPS SUBMISSION :: lyr=layername\n"
@@ -1176,32 +1116,10 @@ class TestSubmitWpsQueue():
 
     @responses.activate
     def test_wps_submission_fail_return_correct_exception(self, mocker):
-        self.mock_mod_xml = mocker.patch('eodslib.mod_the_xml')
-        self.mock_mod_xml.return_value = None
-
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        url = 'https://domain'
-
-        config_wpsprocess = {
-            'xml_config': {
-                'template_layer_name': 'layername',
-            },
-        }
-
-        request_config = {
-            'wps_server': url,
-            'access_token': 'token',
-            'headers': {'header': 'a_header'},
-            'verify': 'verify'
-        }
-
-        responses.add(responses.POST, url, status=200,
+        responses.add(responses.POST, self.url, status=200,
                       body='Body ExceptionReport executionId=123')
 
-        error = eodslib.submit_wps_queue(request_config, config_wpsprocess)
-        print(error)
+        error = eodslib.submit_wps_queue(self.request_config, self.config_wpsprocess)
 
         expected_error_message = ('wps server returned an exception',
                                   'Body ExceptionReport executionId=123')
@@ -1211,100 +1129,57 @@ class TestSubmitWpsQueue():
 
     @responses.activate
     def test_all_correct_responses_mod_the_xml_called_once(self, mocker):
-        self.mock_mod_xml = mocker.patch('eodslib.mod_the_xml')
-        self.mock_mod_xml.return_value = None
-
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        url = 'https://domain'
-
-        config_wpsprocess = {
-            'xml_config': {
-                'template_layer_name': 'layername',
-            },
-        }
-
-        request_config = {
-            'wps_server': url,
-            'access_token': 'token',
-            'headers': {'header': 'a_header'},
-            'verify': 'verify'
-        }
-
-        responses.add(responses.POST, url, status=200,
+        responses.add(responses.POST, self.url, status=200,
                       body='Body ExceptionReport executionId=123')
 
-        _ = eodslib.submit_wps_queue(request_config, config_wpsprocess)
+        _ = eodslib.submit_wps_queue(self.request_config, self.config_wpsprocess)
 
-        self.mock_mod_xml.assert_called_once_with(config_wpsprocess)
+        self.mock_mod_xml.assert_called_once_with(self.config_wpsprocess)
 
     @responses.activate
     def test_all_correct_responses_raise_for_status_called_once(self, mocker):
-        self.mock_mod_xml = mocker.patch('eodslib.mod_the_xml')
-        self.mock_mod_xml.return_value = None
-
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        url = 'https://domain'
-
-        config_wpsprocess = {
-            'xml_config': {
-                'template_layer_name': 'layername',
-            },
-        }
-
-        request_config = {
-            'wps_server': url,
-            'access_token': 'token',
-            'headers': {'header': 'a_header'},
-            'verify': 'verify'
-        }
-
-        responses.add(responses.POST, url, status=200,
+        responses.add(responses.POST, self.url, status=200,
                       body='Body executionId=123')
 
         self.mock_raise_for_status = mocker.patch.object(
             requests.Response, 'raise_for_status')
         self.mock_raise_for_status.return_value = None
 
-        _ = eodslib.submit_wps_queue(request_config, config_wpsprocess)
+        _ = eodslib.submit_wps_queue(self.request_config, self.config_wpsprocess)
 
         self.mock_raise_for_status.assert_called_once_with()
 
 
 class TestPollApiStatus():
-    def test_all_correct_responses_return_correct_execution_dict(self, mocker):
+    @pytest.fixture(autouse=True, scope='function')
+    def setup(self, mocker):
         self.mock_datetime = mocker.patch('eodslib.datetime')
         self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
 
         self.mock_get = mocker.patch('eodslib.requests.get')
-        self.mock_get.return_value.content = bytes(
-            b'<?xml version="1.0" encoding="UTF-8"?><wps:ExecuteResponse xmlns:wps="http://www.opengis.net/wps/1.0.0"><wps:Status><wps:ProcessSucceeded></wps:ProcessSucceeded></wps:Status><wps:ProcessOutputs><wps:Output><wps:Reference href="href" mimeType="mime"/></wps:Output></wps:ProcessOutputs></wps:ExecuteResponse>'
-        )
 
         self.mock_download_single = mocker.patch(
             'eodslib.download_wps_result_single')
 
-        def download_side_effect_fn(*args, **kwargs):
-            execution_dict = args[1]
-            return execution_dict
+        self.mock_download_single.side_effect = return_second_arg_side_effect_fn
 
-        self.mock_download_single.side_effect = download_side_effect_fn
-
-        request_config = {
+        self.request_config = {
             'wps_server': 'https://domain',
             'access_token': 'token',
             'headers': {'header': 'a_header'},
             'verify': 'verify'
         }
+    
+    def test_all_correct_responses_return_correct_execution_dict(self, mocker):
+        self.mock_get.return_value.content = bytes(
+            b'<?xml version="1.0" encoding="UTF-8"?><wps:ExecuteResponse xmlns:wps="http://www.opengis.net/wps/1.0.0"><wps:Status><wps:ProcessSucceeded></wps:ProcessSucceeded></wps:Status><wps:ProcessOutputs><wps:Output><wps:Reference href="href" mimeType="mime"/></wps:Output></wps:ProcessOutputs></wps:ExecuteResponse>'
+        )
 
         execution_dict = {'job_id': '123', 'timestamp_job_start': datetime(
             2021, 8, 17, 0, 0), 'continue_process': True}
 
         execution_dict = eodslib.poll_api_status(
-            execution_dict, request_config, None)
+            execution_dict, self.request_config, None)
 
         expected_execution_dict = {'job_id': '123',
                                    'timestamp_job_start': datetime(2021, 8, 17, 0, 0),
@@ -1317,23 +1192,12 @@ class TestPollApiStatus():
         assert execution_dict == expected_execution_dict
 
     def test_requests_get_exception_return_correct_execution_dict(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_get = mocker.patch('eodslib.requests.get')
         self.mock_get.side_effect = Exception('Test Exception')
-
-        request_config = {
-            'wps_server': 'https://domain',
-            'access_token': 'token',
-            'headers': {'header': 'a_header'},
-            'verify': 'verify'
-        }
 
         execution_dict = {'job_id': '123', 'continue_process': True}
 
         execution_dict = eodslib.poll_api_status(
-            execution_dict, request_config, None)
+            execution_dict, self.request_config, None)
 
         expected_execution_dict = {'job_id': '123',
                                    'continue_process': False,
@@ -1344,39 +1208,24 @@ class TestPollApiStatus():
         assert execution_dict == expected_execution_dict
 
     def test_continue_process_false_no_exception_report_return_input_execution_dict(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        request_config = {}
+        # request_config = {} # Look at!
 
         execution_dict = {'continue_process': False}
 
         execution_dict = eodslib.poll_api_status(
-            execution_dict, request_config, None)
+            execution_dict, self.request_config, None)
 
         expected_execution_dict = {'continue_process': False}
 
         assert execution_dict == expected_execution_dict
 
     def test_no_execute_response_no_exception_report_return_input_execution_dict(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_get = mocker.patch('eodslib.requests.get')
-
         self.mock_xml_dict_parse = mocker.patch('eodslib.xmltodict.parse')
-
-        request_config = {
-            'wps_server': 'https://domain',
-            'access_token': 'token',
-            'headers': {'header': 'a_header'},
-            'verify': 'verify'
-        }
 
         execution_dict = {'job_id': '123', 'continue_process': True}
 
         execution_dict = eodslib.poll_api_status(
-            execution_dict, request_config, None)
+            execution_dict, self.request_config, None)
 
         expected_execution_dict = {'job_id': '123',
                                    'continue_process': True,
@@ -1385,26 +1234,14 @@ class TestPollApiStatus():
         assert execution_dict == expected_execution_dict
 
     def test_no_execute_response_with_exception_report_return_correct_execution_dict(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_get = mocker.patch('eodslib.requests.get')
-
         self.mock_xml_dict_parse = mocker.patch('eodslib.xmltodict.parse')
         self.mock_xml_dict_parse.return_value = {'ows:ExceptionReport': {
             'ows:Exception': {'ows:ExceptionText': 'Error Test'}}}
 
-        request_config = {
-            'wps_server': 'https://domain',
-            'access_token': 'token',
-            'headers': {'header': 'a_header'},
-            'verify': 'verify'
-        }
-
         execution_dict = {'job_id': '123', 'continue_process': True}
 
         execution_dict = eodslib.poll_api_status(
-            execution_dict, request_config, None)
+            execution_dict, self.request_config, None)
 
         expected_execution_dict = {'job_id': '123',
                                    'continue_process': False,
@@ -1416,26 +1253,14 @@ class TestPollApiStatus():
         assert execution_dict == expected_execution_dict
 
     def test_with_execute_response_no_process_succeeded_with_process_failed_return_correct_execution_dict(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_get = mocker.patch('eodslib.requests.get')
-
         self.mock_xml_dict_parse = mocker.patch('eodslib.xmltodict.parse')
         self.mock_xml_dict_parse.return_value = {'wps:ExecuteResponse': {
             'wps:Status': {'wps:ProcessFailed': None}}}
 
-        request_config = {
-            'wps_server': 'https://domain',
-            'access_token': 'token',
-            'headers': {'header': 'a_header'},
-            'verify': 'verify'
-        }
-
         execution_dict = {'job_id': '123', 'continue_process': True}
 
         execution_dict = eodslib.poll_api_status(
-            execution_dict, request_config, None)
+            execution_dict, self.request_config, None)
 
         expected_execution_dict = {'job_id': '123',
                                    'continue_process': False,
@@ -1447,26 +1272,14 @@ class TestPollApiStatus():
         assert execution_dict == expected_execution_dict
 
     def test_with_execute_response_no_process_succeeded_no_process_failed_return_correct_execution_dict(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_get = mocker.patch('eodslib.requests.get')
-
         self.mock_xml_dict_parse = mocker.patch('eodslib.xmltodict.parse')
         self.mock_xml_dict_parse.return_value = {
             'wps:ExecuteResponse': {'wps:Status': {'key': 'value'}}}
 
-        request_config = {
-            'wps_server': 'https://domain',
-            'access_token': 'token',
-            'headers': {'header': 'a_header'},
-            'verify': 'verify'
-        }
-
         execution_dict = {'job_id': '123', 'continue_process': True}
 
         execution_dict = eodslib.poll_api_status(
-            execution_dict, request_config, None)
+            execution_dict, self.request_config, None)
 
         expected_execution_dict = {'job_id': '123',
                                    'continue_process': True,
@@ -1476,35 +1289,15 @@ class TestPollApiStatus():
         assert execution_dict == expected_execution_dict
 
     def test_all_correct_responses_download_wps_result_single_correctly_called_once(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_get = mocker.patch('eodslib.requests.get')
         self.mock_get.return_value.content = bytes(
             b'<?xml version="1.0" encoding="UTF-8"?><wps:ExecuteResponse xmlns:wps="http://www.opengis.net/wps/1.0.0"><wps:Status><wps:ProcessSucceeded></wps:ProcessSucceeded></wps:Status><wps:ProcessOutputs><wps:Output><wps:Reference href="href" mimeType="mime"/></wps:Output></wps:ProcessOutputs></wps:ExecuteResponse>'
         )
-
-        self.mock_download_single = mocker.patch(
-            'eodslib.download_wps_result_single')
-
-        def download_side_effect_fn(*args, **kwargs):
-            execution_dict = args[1]
-            return execution_dict
-
-        self.mock_download_single.side_effect = download_side_effect_fn
-
-        request_config = {
-            'wps_server': 'https://domain',
-            'access_token': 'token',
-            'headers': {'header': 'a_header'},
-            'verify': 'verify'
-        }
 
         execution_dict = {'job_id': '123', 'timestamp_job_start': datetime(
             2021, 8, 17, 0, 0), 'continue_process': True}
 
         execution_dict = eodslib.poll_api_status(
-            execution_dict, request_config, None)
+            execution_dict, self.request_config, None)
 
         expected_execution_dict = {'job_id': '123',
                                    'timestamp_job_start': datetime(2021, 8, 17, 0, 0),
@@ -1515,27 +1308,15 @@ class TestPollApiStatus():
                                    'timestamp_ready_to_dl': datetime(2021, 8, 17, 0, 0)}
 
         self.mock_download_single.assert_called_once_with(
-            request_config, expected_execution_dict, None)
+            self.request_config, expected_execution_dict, None)
 
     def test_with_continue_process_requests_get_correctly_called_once(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_get = mocker.patch('eodslib.requests.get')
-
         self.mock_xml_dict_parse = mocker.patch('eodslib.xmltodict.parse')
-
-        request_config = {
-            'wps_server': 'https://domain',
-            'access_token': 'token',
-            'headers': {'header': 'a_header'},
-            'verify': 'verify'
-        }
 
         execution_dict = {'job_id': '123', 'continue_process': True}
 
         _ = eodslib.poll_api_status(
-            execution_dict, request_config, None)
+            execution_dict, self.request_config, None)
 
         self.mock_get.assert_called_once_with('https://domain', params={'access_token': 'token',
                                                                         'SERVICE': 'WPS',
@@ -1545,25 +1326,14 @@ class TestPollApiStatus():
                                               headers={'header': 'a_header'}, verify='verify')
 
     def test_with_continue_process_xml_to_dict_parse_correctly_called_once(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_get = mocker.patch('eodslib.requests.get')
         self.mock_get.return_value.content = 'get content'
 
         self.mock_xml_dict_parse = mocker.patch('eodslib.xmltodict.parse')
 
-        request_config = {
-            'wps_server': 'https://domain',
-            'access_token': 'token',
-            'headers': {'header': 'a_header'},
-            'verify': 'verify'
-        }
-
         execution_dict = {'job_id': '123', 'continue_process': True}
 
         _ = eodslib.poll_api_status(
-            execution_dict, request_config, None)
+            execution_dict, self.request_config, None)
 
         self.mock_xml_dict_parse.assert_called_once_with('get content')
 
