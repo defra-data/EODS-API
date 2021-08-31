@@ -1479,15 +1479,10 @@ class TestProcessWpsDownloadedFiles():
     # source/ # source_file_to_extract.parent.parent
     # layername # filename_stub
     # source/layername.txt # final path
-    def test_successful_get_zip_file_return_correct_execution_dict(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
 
-        self.mock_zip = mocker.patch('eodslib.ZipFile')
-
-        class zipmock():
-            def __init__(self):
-                info = ZipInfo(filename='alphanumstr.tiff')
+    class zipmock():
+            def __init__(self,filename):
+                info = ZipInfo(filename=filename)
                 info.file_size = 1
                 info.compress_size = 1
                 self.filelist = [info]
@@ -1497,11 +1492,23 @@ class TestProcessWpsDownloadedFiles():
 
             def close(self):
                 return None
+    
+    @pytest.fixture(autouse=True, scope='function')
+    def setup(self, mocker):
+        self.mock_datetime = mocker.patch('eodslib.datetime')
+        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
 
-        self.mock_zip.return_value = zipmock()
+        self.mock_zip = mocker.patch('eodslib.ZipFile')
 
         self.mock_unlink = mocker.patch.object(Path, 'unlink')
         self.mock_replace = mocker.patch.object(Path, 'replace')
+        self.mock_rename = mocker.patch.object(Path, 'rename')
+
+        self.mock_is_dir = mocker.patch.object(Path, 'is_dir')
+        self.mock_rmdir = mocker.patch.object(Path, 'rmdir')
+        
+    def test_successful_get_zip_file_return_correct_execution_dict(self, mocker):
+        self.mock_zip.return_value = self.zipmock('alphanumstr.tiff')
 
         execution_dict = {'job_id': '123',
                           'dl_file': Path('source/parent/filename.zip'),
@@ -1520,11 +1527,6 @@ class TestProcessWpsDownloadedFiles():
         assert execution_dict == expected_execution_dict
 
     def test_successful_get_not_zip_file_return_correct_execution_dict(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_rename = mocker.patch.object(Path, 'rename')
-
         execution_dict = {'job_id': '123',
                           'dl_file': Path('source/parent/filename.txt'),
                           'filename_stub': 'layername'}
@@ -1542,27 +1544,7 @@ class TestProcessWpsDownloadedFiles():
         assert execution_dict == expected_execution_dict
 
     def test_successful_get_zip_file_sld_f_path_unlinked(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_zip = mocker.patch('eodslib.ZipFile')
-
-        class zipmock():
-            def __init__(self):
-                info = ZipInfo(filename='alphanumstr.sld')
-                info.file_size = 1
-                info.compress_size = 1
-                self.filelist = [info]
-
-            def extractall(self, _):
-                return None
-
-            def close(self):
-                return None
-
-        self.mock_zip.return_value = zipmock()
-
-        self.mock_unlink = mocker.patch.object(Path, 'unlink')
+        self.mock_zip.return_value = self.zipmock('alphanumstr.sld')
 
         execution_dict = {'job_id': '123',
                           'dl_file': Path('source/parent/filename.zip'),
@@ -1573,28 +1555,7 @@ class TestProcessWpsDownloadedFiles():
         assert self.mock_unlink.call_count == 2
 
     def test_successful_get_zip_file_sld_f_path_not_replaced(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_zip = mocker.patch('eodslib.ZipFile')
-
-        class zipmock():
-            def __init__(self):
-                info = ZipInfo(filename='alphanumstr.sld')
-                info.file_size = 1
-                info.compress_size = 1
-                self.filelist = [info]
-
-            def extractall(self, _):
-                return None
-
-            def close(self):
-                return None
-
-        self.mock_zip.return_value = zipmock()
-
-        self.mock_unlink = mocker.patch.object(Path, 'unlink')
-        self.mock_replace = mocker.patch.object(Path, 'replace')
+        self.mock_zip.return_value = self.zipmock('alphanumstr.sld')
 
         execution_dict = {'job_id': '123',
                           'dl_file': Path('source/parent/filename.zip'),
@@ -1605,28 +1566,7 @@ class TestProcessWpsDownloadedFiles():
         self.mock_replace.assert_not_called()
 
     def test_successful_get_zip_file_sld_f_path_not_renamed(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_zip = mocker.patch('eodslib.ZipFile')
-
-        class zipmock():
-            def __init__(self):
-                info = ZipInfo(filename='alphanumstr.sld')
-                info.file_size = 1
-                info.compress_size = 1
-                self.filelist = [info]
-
-            def extractall(self, _):
-                return None
-
-            def close(self):
-                return None
-
-        self.mock_zip.return_value = zipmock()
-
-        self.mock_unlink = mocker.patch.object(Path, 'unlink')
-        self.mock_rename = mocker.patch.object(Path, 'rename')
+        self.mock_zip.return_value = self.zipmock('alphanumstr.sld')
 
         execution_dict = {'job_id': '123',
                           'dl_file': Path('source/parent/filename.zip'),
@@ -1637,28 +1577,7 @@ class TestProcessWpsDownloadedFiles():
         self.mock_rename.assert_not_called()
 
     def test_successful_get_zip_file_not_sld_f_path_correctly_replaced(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_zip = mocker.patch('eodslib.ZipFile')
-
-        class zipmock():
-            def __init__(self):
-                info = ZipInfo(filename='alphanumstr.txt')
-                info.file_size = 1
-                info.compress_size = 1
-                self.filelist = [info]
-
-            def extractall(self, _):
-                return None
-
-            def close(self):
-                return None
-
-        self.mock_zip.return_value = zipmock()
-
-        self.mock_unlink = mocker.patch.object(Path, 'unlink')
-        self.mock_replace = mocker.patch.object(Path, 'replace')
+        self.mock_zip.return_value = self.zipmock('alphanumstr.txt')
 
         execution_dict = {'job_id': '123',
                           'dl_file': Path('source/parent/filename.zip'),
@@ -1669,28 +1588,7 @@ class TestProcessWpsDownloadedFiles():
         self.mock_replace.assert_called_once_with(Path('source/layername.txt'))
 
     def test_successful_get_zip_file_not_sld_f_path_not_unlinked(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_zip = mocker.patch('eodslib.ZipFile')
-
-        class zipmock():
-            def __init__(self):
-                info = ZipInfo(filename='alphanumstr.txt')
-                info.file_size = 1
-                info.compress_size = 1
-                self.filelist = [info]
-
-            def extractall(self, _):
-                return None
-
-            def close(self):
-                return None
-
-        self.mock_zip.return_value = zipmock()
-
-        self.mock_unlink = mocker.patch.object(Path, 'unlink')
-        self.mock_replace = mocker.patch.object(Path, 'replace')
+        self.mock_zip.return_value = self.zipmock('alphanumstr.txt')
 
         execution_dict = {'job_id': '123',
                           'dl_file': Path('source/parent/filename.zip'),
@@ -1701,29 +1599,7 @@ class TestProcessWpsDownloadedFiles():
         assert self.mock_unlink.call_count == 1
 
     def test_successful_get_zip_file_not_sld_source_path_not_renamed(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_zip = mocker.patch('eodslib.ZipFile')
-
-        class zipmock():
-            def __init__(self):
-                info = ZipInfo(filename='alphanumstr.txt')
-                info.file_size = 1
-                info.compress_size = 1
-                self.filelist = [info]
-
-            def extractall(self, _):
-                return None
-
-            def close(self):
-                return None
-
-        self.mock_zip.return_value = zipmock()
-
-        self.mock_unlink = mocker.patch.object(Path, 'unlink')
-        self.mock_replace = mocker.patch.object(Path, 'replace')
-        self.mock_rename = mocker.patch.object(Path, 'rename')
+        self.mock_zip.return_value = self.zipmock('alphanumstr.txt')
 
         execution_dict = {'job_id': '123',
                           'dl_file': Path('source/parent/filename.zip'),
@@ -1734,11 +1610,6 @@ class TestProcessWpsDownloadedFiles():
         self.mock_rename.assert_not_called()
 
     def test_successful_get_not_zip_file_source_path_correctly_renamed(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_rename = mocker.patch.object(Path, 'rename')
-
         execution_dict = {'job_id': '123',
                           'dl_file': Path('source/parent/filename.txt'),
                           'filename_stub': 'layername'}
@@ -1748,13 +1619,6 @@ class TestProcessWpsDownloadedFiles():
         self.mock_rename.assert_called_once_with(Path('source/layername.txt'))
 
     def test_successful_get_not_zip_file_zipfile_not_called(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_zip = mocker.patch('eodslib.ZipFile')
-
-        self.mock_rename = mocker.patch.object(Path, 'rename')
-
         execution_dict = {'job_id': '123',
                           'dl_file': Path('source/parent/filename.txt'),
                           'filename_stub': 'layername'}
@@ -1764,17 +1628,7 @@ class TestProcessWpsDownloadedFiles():
         self.mock_zip.assert_not_called()
 
     def test_successful_get_source_file_parent_is_dir_parent_is_rm(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_zip = mocker.patch('eodslib.ZipFile')
-
-        self.mock_rename = mocker.patch.object(Path, 'rename')
-
-        self.mock_is_dir = mocker.patch.object(Path, 'is_dir')
         self.mock_is_dir.return_value = True
-
-        self.mock_rmdir = mocker.patch.object(Path, 'rmdir')
 
         execution_dict = {'job_id': '123',
                           'dl_file': Path('source/parent/filename.txt'),
@@ -1785,18 +1639,8 @@ class TestProcessWpsDownloadedFiles():
         self.mock_rmdir.assert_called_once()
 
     def test_successful_get_source_file_parent_is_not_dir_parent_is_not_rm(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
-        self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
-
-        self.mock_zip = mocker.patch('eodslib.ZipFile')
-
-        self.mock_rename = mocker.patch.object(Path, 'rename')
-
-        self.mock_is_dir = mocker.patch.object(Path, 'is_dir')
         self.mock_is_dir.return_value = False
-
-        self.mock_rmdir = mocker.patch.object(Path, 'rmdir')
-
+        
         execution_dict = {'job_id': '123',
                           'dl_file': Path('source/parent/filename.txt'),
                           'filename_stub': 'layername'}
