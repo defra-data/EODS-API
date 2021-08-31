@@ -1,4 +1,4 @@
-from pathlib import Path, PosixPath
+from pathlib import Path
 import eodslib
 import os
 import pytest
@@ -18,43 +18,38 @@ def return_second_arg_side_effect_fn(*args, **kwargs):
     return args[1]
 
 class TestPostLayerGroupAPI():
-    def test_single_layer_handles_json_response(self, mocker):
-        self.mock_post = mocker.patch('eodslib.requests.post')
-        self.mock_post.return_value.content = bytes(b'{"a":"b"}')
-
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
-        url = f'{conn["domain"]}api/layer_groups/'
-        the_json = {'name': 'unittest_group', 'abstract': 'This is a unittested abstract', 'layers': [
-            'keep_api_test_create_group']}
-
-        response_json = eodslib.post_to_layer_group_api(
-            conn, url, the_json, quiet=False)
-
-        mocker.resetall()
-
-        assert response_json == {"a": "b"}
-
-    @responses.activate
-    def test_incorrect_status_code_raise_for_status_triggers_exception(self):
-        conn = {
+    @pytest.fixture(autouse=True, scope='function')
+    def class_setup(self):
+        self.conn = {
             'domain': 'https://domain',
             'username': 'username',
             'access_token': 'token',
         }
 
-        url = f'{conn["domain"]}api/layer_groups/'
+    
+    def test_single_layer_handles_json_response(self, mocker):
+        self.mock_post = mocker.patch('eodslib.requests.post')
+        self.mock_post.return_value.content = bytes(b'{"a":"b"}')
+
+        url = f'{self.conn["domain"]}api/layer_groups/'
+        the_json = {'name': 'unittest_group', 'abstract': 'This is a unittested abstract', 'layers': [
+            'keep_api_test_create_group']}
+
+        response_json = eodslib.post_to_layer_group_api(
+            self.conn, url, the_json, quiet=False)
+
+        assert response_json == {"a": "b"}
+
+    @responses.activate
+    def test_incorrect_status_code_raise_for_status_triggers_exception(self):
+        url = f'{self.conn["domain"]}api/layer_groups/'
         the_json = {'name': 'unittest_group', 'abstract': 'This is a unittested abstract', 'layers': [
             'keep_api_test_create_group']}
 
         responses.add(responses.POST, url, status=400)
 
         with pytest.raises(requests.exceptions.HTTPError):
-            eodslib.post_to_layer_group_api(conn, url, the_json, quiet=False)
+            eodslib.post_to_layer_group_api(self.conn, url, the_json, quiet=False)
 
     @pytest.mark.skip_real()
     def test_incorrect_access_token_triggers_exception(self):
@@ -90,38 +85,24 @@ class TestPostLayerGroupAPI():
         self.mock_post = mocker.patch('eodslib.requests.post')
         self.mock_post.return_value.content = bytes(b'{"a":"b"}')
 
-        conn = {
-            'domain': 'domainname',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
-        url = f'{conn["domain"]}api/layer_groups/'
+        url = f'{self.conn["domain"]}api/layer_groups/'
         the_json = {'name': 'unittest_group', 'abstract': 'This is a unittested abstract', 'layers': [
             'keep_api_test_create_group']}
 
         response_json = eodslib.post_to_layer_group_api(
-            conn, url, the_json, quiet=True)
-
-        mocker.resetall()
+            self.conn, url, the_json, quiet=True)
 
         assert response_json == {"a": "b"}
 
     @responses.activate
     def test_incorrect_status_code_raise_for_status_quiet_error_stdout_call(self, capsys):
-        conn = {
-            'domain': 'https://domain',
-            'username': 'username',
-            'access_token': 'token',
-        }
-
-        url = f'{conn["domain"]}api/layer_groups/'
+        url = f'{self.conn["domain"]}api/layer_groups/'
         the_json = {'name': 'unittest_group', 'abstract': 'This is a unittested abstract', 'layers': [
             'keep_api_test_create_group']}
 
         responses.add(responses.POST, url, status=400)
 
-        eodslib.post_to_layer_group_api(conn, url, the_json, quiet=True)
+        eodslib.post_to_layer_group_api(self.conn, url, the_json, quiet=True)
 
         captured = capsys.readouterr()
         captured_list = captured.out.split('\n')
@@ -184,7 +165,7 @@ class TestPostLayerGroupAPI():
 
 class TestCreateLayerGroup():
     @pytest.fixture(autouse=True, scope='function')
-    def setup(self, mocker):
+    def class_setup(self, mocker):
         self.mock_post = mocker.patch('eodslib.post_to_layer_group_api')
         self.mock_post.return_value = 'mock response json'
         self.conn = {
@@ -203,8 +184,6 @@ class TestCreateLayerGroup():
             abstract='some description of the layer group '
         )
 
-        mocker.resetall()
-
         assert response_json == 'mock response json'
 
     def test_list_of_layers_not_list_triggers_exception(self, mocker):
@@ -219,8 +198,6 @@ class TestCreateLayerGroup():
             )
         assert error.value.args[0] == 'ERROR. list_of_layers is not a list, aborting ...'
 
-        mocker.resetall()
-
     def test_name_not_str_triggers_exception(self, mocker):
         list_of_layers = ['keep_api_test_create_group']
 
@@ -232,8 +209,6 @@ class TestCreateLayerGroup():
                 abstract='some description of the layer group '
             )
         assert error.value.args[0] == 'ERROR. layer group name is not a string, aborting ...'
-
-        mocker.resetall()
 
     def test_list_of_layers_empty_triggers_exception(self, mocker):
         list_of_layers = []
@@ -247,8 +222,6 @@ class TestCreateLayerGroup():
             )
         assert error.value.args[0] == 'ERROR. list_of_layers is empty, aborting ...'
 
-        mocker.resetall()
-
     def test_name_empty_triggers_exception(self, mocker):
         list_of_layers = ['keep_api_test_create_group']
 
@@ -261,12 +234,10 @@ class TestCreateLayerGroup():
             )
         assert error.value.args[0] == 'ERROR. layer group name string is empty, aborting ...'
 
-        mocker.resetall()
-
 
 class TestModifyLayerGroup():
     @pytest.fixture(autouse=True, scope='function')
-    def setup(self, mocker):
+    def class_setup(self, mocker):
         self.mock_post = mocker.patch('eodslib.post_to_layer_group_api')
         self.mock_post.return_value = 'mock response json'
         self.conn = {
@@ -284,7 +255,6 @@ class TestModifyLayerGroup():
             0,
             abstract='update the abstract '
         )
-        mocker.resetall()
 
         assert response_json == 'mock response json'
 
@@ -300,8 +270,6 @@ class TestModifyLayerGroup():
             )
         assert error.value.args[0] == 'ERROR. list_of_layers is not a list, aborting ...'
 
-        mocker.resetall()
-
     def test_id_not_int_triggers_exception(self, mocker):
         list_of_layers = ['keep_api_test_create_group']
 
@@ -314,8 +282,6 @@ class TestModifyLayerGroup():
             )
         assert error.value.args[0] == 'ERROR. layer group ID is not an integer, aborting ...'
 
-        mocker.resetall()
-
     def test_list_of_layers_empty_triggers_exception(self, mocker):
         list_of_layers = []
 
@@ -327,8 +293,6 @@ class TestModifyLayerGroup():
                 abstract='update the abstract '
             )
         assert error.value.args[0] == 'ERROR. list_of_layers is empty, aborting ...'
-
-        mocker.resetall()
 
 
 class TestGetBboxCornersFromWkt():
@@ -369,7 +333,7 @@ class TestGetBboxCornersFromWkt():
 
 class TestFindMinimumCloudList():
     @pytest.fixture(autouse=True, scope='function')
-    def setup(self, mocker):
+    def class_setup(self, mocker):
         self.mock_path_exists = mocker.patch('eodslib.Path.exists')
         self.mock_path_exists.return_value = True
         self.mock_read_csv = mocker.patch('eodslib.pd.read_csv')
@@ -393,12 +357,9 @@ class TestFindMinimumCloudList():
                                          columns=['title', 'alternate', 'granule-ref', 'orbit-ref', 'ARCSI_CLOUD_COVER', 'split_granule.name', 'split_ARCSI_CLOUD_COVER', 'split_cloud_cover', 'title_stub', 'gran-orb', 'granule-stub'])
 
         response_difference = response.compare(expected_response)
-        # more options can be specified also
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
             print('Difference between received and expected responses:')
             print(response_difference)
-
-        mocker.resetall()
 
         assert response_difference.empty
 
@@ -419,12 +380,9 @@ class TestFindMinimumCloudList():
                                          columns=['title', 'alternate', 'granule-ref', 'orbit-ref', 'ARCSI_CLOUD_COVER', 'split_granule.name', 'split_ARCSI_CLOUD_COVER', 'split_cloud_cover', 'title_stub', 'gran-orb', 'granule-stub'])
 
         response_difference = response.compare(expected_response, align_axis=0)
-        # more options can be specified also
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
             print('Difference between received and expected responses:')
             print(response_difference)
-
-        mocker.resetall()
 
         assert response_difference.empty
 
@@ -447,8 +405,6 @@ class TestFindMinimumCloudList():
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
             print('Difference between received and expected responses:')
             print(response_difference)
-
-        mocker.resetall()
 
         assert response_difference.empty
 
@@ -481,14 +437,12 @@ class TestFindMinimumCloudList():
         with pytest.raises(ValueError) as error:
             eodslib.find_minimum_cloud_list(df)
 
-        mocker.resetall()
-
         assert error.value.args[0] == 'ERROR :: safe-granule-orbit-list.txt cannot be found'
 
 
 class TestQueryCatalog():
     @pytest.fixture(autouse=True, scope='function')
-    def setup(self, mocker):
+    def class_setup(self, mocker):
         self.mock_get = mocker.patch('eodslib.requests.get')
         self.mock_get.return_value.status_code = 200
         self.mock_get.return_value.content = bytes(
@@ -532,8 +486,6 @@ class TestQueryCatalog():
 
         output_list_bool = output_list == expected_output_list
         filtered_df_bool = df_difference.empty
-
-        mocker.resetall()
 
         assert output_list_bool and filtered_df_bool
 
@@ -616,8 +568,6 @@ class TestQueryCatalog():
         output_list_bool = output_list == expected_output_list
         filtered_df_bool = filtered_df == expected_filtered_df
 
-        mocker.resetall()
-
         assert output_list_bool and filtered_df_bool
 
     def test_non_200_status_trigger_exception(self, mocker):
@@ -633,8 +583,6 @@ class TestQueryCatalog():
             str(self.mock_get.return_value.status_code) + ' (NOT SUCCESSFUL)' + \
             str(self.mock_get.return_value.status_code) + \
             ' :: QUERY URL (CONTAINS SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE) = ' + 'testurl'
-
-        mocker.resetall()
 
         assert error.value.args[0] == expected_error
 
@@ -653,8 +601,6 @@ class TestQueryCatalog():
         error_message = trim_out
 
         expected_error = "timestamp :: ERROR, an Exception was raised, no list returned\ntest error message"
-
-        mocker.resetall()
 
         assert error_message == expected_error
 
@@ -690,8 +636,6 @@ class TestQueryCatalog():
         output_list_bool = output_list == expected_output_list
         filtered_df_bool = df_difference.empty
 
-        mocker.resetall()
-
         assert output_list_bool and filtered_df_bool
 
     def test_sat_id_not_2_return_correct_list_and_df(self, mocker):
@@ -719,8 +663,6 @@ class TestQueryCatalog():
 
         output_list_bool = output_list == expected_output_list
         filtered_df_bool = df_difference.empty
-
-        mocker.resetall()
 
         assert output_list_bool and filtered_df_bool
 
@@ -751,8 +693,6 @@ class TestQueryCatalog():
         output_list_bool = output_list == expected_output_list
         filtered_df_bool = df_difference.empty
 
-        mocker.resetall()
-
         assert output_list_bool and filtered_df_bool
 
     def test_find_least_cloud_false_sat_id_2_return_correct_list_and_df_with_new_cols(self, mocker):
@@ -782,8 +722,6 @@ class TestQueryCatalog():
 
         output_list_bool = output_list == expected_output_list
         filtered_df_bool = df_difference.empty
-
-        mocker.resetall()
 
         assert output_list_bool and filtered_df_bool
 
@@ -818,8 +756,6 @@ class TestQueryCatalog():
 
         output_list_bool = output_list == expected_output_list
         filtered_df_bool = df_difference.empty
-
-        mocker.resetall()
 
         assert output_list_bool and filtered_df_bool
 
@@ -869,14 +805,12 @@ class TestQueryCatalog():
         output_list_bool = output_list == expected_output_list
         filtered_df_bool = df_difference.empty
 
-        mocker.resetall()
-
         assert output_list_bool and filtered_df_bool
 
 
 class TestRunWps():
     @pytest.fixture(autouse=True, scope='function')
-    def setup(self, mocker):
+    def class_setup(self, mocker):
         self.mock_submit_queue = mocker.patch('eodslib.submit_wps_queue')
         self.mock_submit_queue.return_value = {'job_id': '123',
                                                'timestamp_job_start': datetime(2021, 8, 17), 'timestamp_job_end': datetime(2021, 8, 18),
@@ -1043,7 +977,7 @@ class TestRunWps():
 
 class TestSubmitWpsQueue():
     @pytest.fixture(autouse=True, scope='function')
-    def setup(self, mocker):
+    def class_setup(self, mocker):
         self.mock_mod_xml = mocker.patch('eodslib.mod_the_xml')
         self.mock_mod_xml.return_value = None
 
@@ -1152,7 +1086,7 @@ class TestSubmitWpsQueue():
 
 class TestPollApiStatus():
     @pytest.fixture(autouse=True, scope='function')
-    def setup(self, mocker):
+    def class_setup(self, mocker):
         self.mock_datetime = mocker.patch('eodslib.datetime')
         self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
 
@@ -1340,7 +1274,7 @@ class TestPollApiStatus():
 
 class TestDownloadWpsResultSingle():
     @pytest.fixture(autouse=True, scope='function')
-    def setup(self, mocker):
+    def class_setup(self, mocker):
         self.mock_datetime = mocker.patch('eodslib.datetime')
         self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
 
@@ -1494,7 +1428,7 @@ class TestProcessWpsDownloadedFiles():
                 return None
     
     @pytest.fixture(autouse=True, scope='function')
-    def setup(self, mocker):
+    def class_setup(self, mocker):
         self.mock_datetime = mocker.patch('eodslib.datetime')
         self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
 
@@ -1640,7 +1574,7 @@ class TestProcessWpsDownloadedFiles():
 
     def test_successful_get_source_file_parent_is_not_dir_parent_is_not_rm(self, mocker):
         self.mock_is_dir.return_value = False
-        
+
         execution_dict = {'job_id': '123',
                           'dl_file': Path('source/parent/filename.txt'),
                           'filename_stub': 'layername'}
