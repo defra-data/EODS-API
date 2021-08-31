@@ -872,44 +872,50 @@ class TestQueryCatalog():
 
 
 class TestRunWps():
-    def test_all_correct_responses_return_correct_execution_dict(self, mocker):
+    @pytest.fixture(autouse=True, scope='function')
+    def setup(self, mocker):
         self.mock_submit_queue = mocker.patch('eodslib.submit_wps_queue')
+        self.mock_submit_queue.return_value = {'job_id': '123',
+                                               'timestamp_job_start': datetime(2021, 8, 17), 'timestamp_job_end': datetime(2021, 8, 18),
+                                               'job_status': None,
+                                               'continue_process': False}
+
+        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
+
+        self.mock_poll = mocker.patch(
+            'eodslib.poll_api_status')
+
+        self.mock_process = mocker.patch(
+            'eodslib.process_wps_downloaded_files')
+        self.mock_process.side_effect = return_first_arg_side_effect_fn
+
+        self.mock_sleep = mocker.patch(
+            'eodslib.time.sleep')
+        self.mock_sleep.return_value = None
+
+        self.conn = {
+            'domain': 'domainname',
+            'access_token': 'token',
+        }
+
+        self.config_wpsprocess = {}
+
+    def test_all_correct_responses_return_correct_execution_dict(self, mocker):
         self.mock_submit_queue.return_value = {'job_id': '123',
                                                'timestamp_job_start': datetime(2021, 8, 17), 'timestamp_job_end': datetime(2021, 8, 18),
                                                }
 
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
         self.mock_make_output_dir.return_value = Path.cwd()
-
-        self.mock_poll = mocker.patch(
-            'eodslib.poll_api_status')
 
         def poll_side_effect_fn(*args, **kwargs):
             execution_dict = args[0]
             execution_dict['continue_process'] = False
             execution_dict['job_status'] = 'DOWNLOAD-SUCCESSFUL'
             return execution_dict
-
+        
         self.mock_poll.side_effect = poll_side_effect_fn
 
-        self.mock_process = mocker.patch(
-            'eodslib.process_wps_downloaded_files')
-
-        def process_side_effect_fn(*args, **kwargs):
-            execution_dict = args[0]
-            return execution_dict
-
-        self.mock_process.side_effect = process_side_effect_fn
-
-        conn = {
-            'domain': 'domainname',
-            'access_token': 'token',
-        }
-
-        config_wpsprocess = {
-        }
-
-        execution_dict = eodslib.run_wps(conn, config_wpsprocess)
+        execution_dict = eodslib.run_wps(self.conn, self.config_wpsprocess)
 
         assert execution_dict == {'job_id': '123', 'job_status': 'DOWNLOAD-SUCCESSFUL',
                                   'timestamp_job_start': datetime(2021, 8, 17), 'timestamp_job_end': datetime(2021, 8, 18),
@@ -917,145 +923,55 @@ class TestRunWps():
                                   'total_job_duration': 1440.0}
 
     def test_output_dir_not_provided_kwarg_set_as_cwd(self, mocker):
-        self.mock_submit_queue = mocker.patch('eodslib.submit_wps_queue')
-        self.mock_submit_queue.return_value = {'job_id': '123',
-                                               'timestamp_job_start': datetime(2021, 8, 17), 'timestamp_job_end': datetime(2021, 8, 18),
-                                               'job_status': None,
-                                               'continue_process': False}
-
-        def return_first_arg_side_effect_fn(*args, **kwargs):
-            execution_dict = args[0]
-            return execution_dict
-
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
         self.mock_make_output_dir.side_effect = return_first_arg_side_effect_fn
 
-        self.mock_poll = mocker.patch(
-            'eodslib.poll_api_status')
         self.mock_poll.side_effect = return_first_arg_side_effect_fn
 
-        self.mock_process = mocker.patch(
-            'eodslib.process_wps_downloaded_files')
-        self.mock_process.side_effect = return_first_arg_side_effect_fn
-
-        conn = {
-            'domain': 'domainname',
-            'access_token': 'token',
-        }
-
-        config_wpsprocess = {
-        }
-
-        _ = eodslib.run_wps(conn, config_wpsprocess)
+        _ = eodslib.run_wps(self.conn, self.config_wpsprocess)
 
         self.mock_make_output_dir.assert_called_once_with(Path.cwd())
 
     def test_verify_not_provided_kwarg_set_as_true(self, mocker):
-        self.mock_submit_queue = mocker.patch('eodslib.submit_wps_queue')
-        self.mock_submit_queue.return_value = {'job_id': '123',
-                                               'timestamp_job_start': datetime(2021, 8, 17), 'timestamp_job_end': datetime(2021, 8, 18),
-                                               'job_status': None,
-                                               'continue_process': False
-                                               }
-
-        def return_first_arg_side_effect_fn(*args, **kwargs):
-            execution_dict = args[0]
-            return execution_dict
-
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
         self.mock_make_output_dir.side_effect = return_first_arg_side_effect_fn
 
-        self.mock_poll = mocker.patch(
-            'eodslib.poll_api_status')
         self.mock_poll.side_effect = return_first_arg_side_effect_fn
 
-        self.mock_process = mocker.patch(
-            'eodslib.process_wps_downloaded_files')
-        self.mock_process.side_effect = return_first_arg_side_effect_fn
-
-        conn = {
-            'domain': 'domainname',
-            'access_token': 'token',
-        }
-
-        config_wpsprocess = {
-        }
-
-        _ = eodslib.run_wps(conn, config_wpsprocess)
+        _ = eodslib.run_wps(self.conn, self.config_wpsprocess)
 
         expected_request_config = {
-            'wps_server': conn['domain'] + '/geoserver/ows',
-            'access_token': conn['access_token'],
+            'wps_server': self.conn['domain'] + '/geoserver/ows',
+            'access_token': self.conn['access_token'],
             'headers': {'Content-type': 'application/xml', 'User-Agent': 'python'},
             'verify': True
         }
 
         self.mock_submit_queue.assert_called_once_with(
-            expected_request_config, config_wpsprocess)
+            expected_request_config, self.config_wpsprocess)
 
     def test_error_in_submit_wps_queue_trigger_quiet_exception(self, mocker, capsys):
-        self.mock_submit_queue = mocker.patch('eodslib.submit_wps_queue')
         self.mock_submit_queue.return_value = None
         self.mock_submit_queue.side_effect = Exception("testing message")
 
-        conn = {
-            'domain': 'domainname',
-            'access_token': 'token',
-        }
-
-        config_wpsprocess = {
-        }
-
-        _ = eodslib.run_wps(conn, config_wpsprocess)
+        _ = eodslib.run_wps(self.conn, self.config_wpsprocess)
 
         captured = capsys.readouterr()
         error_message = "('testing message',)\nThe WPS submission has failed\n"
         assert captured.out == error_message
 
     def test_continue_process_false_poll_api_called_once(self, mocker):
-        self.mock_submit_queue = mocker.patch('eodslib.submit_wps_queue')
-        self.mock_submit_queue.return_value = {'job_id': '123',
-                                               'timestamp_job_start': datetime(2021, 8, 17), 'timestamp_job_end': datetime(2021, 8, 18),
-                                               'job_status': None,
-                                               'continue_process': False}
-
-        def return_first_arg_side_effect_fn(*args, **kwargs):
-            execution_dict = args[0]
-            return execution_dict
-
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
         self.mock_make_output_dir.side_effect = return_first_arg_side_effect_fn
 
-        self.mock_poll = mocker.patch(
-            'eodslib.poll_api_status')
         self.mock_poll.side_effect = return_first_arg_side_effect_fn
 
-        self.mock_process = mocker.patch(
-            'eodslib.process_wps_downloaded_files')
-        self.mock_process.side_effect = return_first_arg_side_effect_fn
-
-        conn = {
-            'domain': 'domainname',
-            'access_token': 'token',
-        }
-
-        config_wpsprocess = {
-        }
-
-        _ = eodslib.run_wps(conn, config_wpsprocess)
+        _ = eodslib.run_wps(self.conn, self.config_wpsprocess)
 
         self.mock_poll.assert_called_once()
 
     def test_poll_api_status_passes_second_try_poll_api_called_twice(self, mocker):
-        self.mock_submit_queue = mocker.patch('eodslib.submit_wps_queue')
         self.mock_submit_queue.return_value = {'job_id': '123',
                                                'timestamp_job_start': datetime(2021, 8, 17), 'timestamp_job_end': datetime(2021, 8, 18),
                                                'job_status': None,
                                                'continue_process': True}
-
-        def return_first_arg_side_effect_fn(*args, **kwargs):
-            execution_dict = args[0]
-            return execution_dict
 
         def poll_side_effect_fn(*args, **kwargs):
             execution_dict = args[0]
@@ -1066,42 +982,19 @@ class TestRunWps():
                 execution_dict['job_status'] = 'DOWNLOAD-SUCCESSFUL'
             return execution_dict
 
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
         self.mock_make_output_dir.side_effect = return_first_arg_side_effect_fn
 
-        self.mock_poll = mocker.patch(
-            'eodslib.poll_api_status')
         self.mock_poll.side_effect = poll_side_effect_fn
 
-        self.mock_sleep = mocker.patch(
-            'eodslib.time.sleep')
-
-        self.mock_process = mocker.patch(
-            'eodslib.process_wps_downloaded_files')
-        self.mock_process.side_effect = return_first_arg_side_effect_fn
-
-        conn = {
-            'domain': 'domainname',
-            'access_token': 'token',
-        }
-
-        config_wpsprocess = {
-        }
-
-        _ = eodslib.run_wps(conn, config_wpsprocess)
+        _ = eodslib.run_wps(self.conn, self.config_wpsprocess)
 
         assert self.mock_poll.call_count == 2
 
     def test_poll_api_status_passes_second_try_time_sleep_called(self, mocker):
-        self.mock_submit_queue = mocker.patch('eodslib.submit_wps_queue')
         self.mock_submit_queue.return_value = {'job_id': '123',
                                                'timestamp_job_start': datetime(2021, 8, 17), 'timestamp_job_end': datetime(2021, 8, 18),
                                                'job_status': None,
                                                'continue_process': True}
-
-        def return_first_arg_side_effect_fn(*args, **kwargs):
-            execution_dict = args[0]
-            return execution_dict
 
         def poll_side_effect_fn(*args, **kwargs):
             execution_dict = args[0]
@@ -1112,30 +1005,11 @@ class TestRunWps():
                 execution_dict['job_status'] = 'DOWNLOAD-SUCCESSFUL'
             return execution_dict
 
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
         self.mock_make_output_dir.side_effect = return_first_arg_side_effect_fn
 
-        self.mock_poll = mocker.patch(
-            'eodslib.poll_api_status')
         self.mock_poll.side_effect = poll_side_effect_fn
 
-        self.mock_sleep = mocker.patch(
-            'eodslib.time.sleep')
-        self.mock_sleep.return_value = None
-
-        self.mock_process = mocker.patch(
-            'eodslib.process_wps_downloaded_files')
-        self.mock_process.side_effect = return_first_arg_side_effect_fn
-
-        conn = {
-            'domain': 'domainname',
-            'access_token': 'token',
-        }
-
-        config_wpsprocess = {
-        }
-
-        _ = eodslib.run_wps(conn, config_wpsprocess)
+        _ = eodslib.run_wps(self.conn, self.config_wpsprocess)
 
         self.mock_sleep.assert_called_once_with(15)
 
@@ -1146,63 +1020,20 @@ class TestRunWps():
                                                'job_status': 'DOWNLOAD-SUCCESSFUL',
                                                'continue_process': False}
 
-        def return_first_arg_side_effect_fn(*args, **kwargs):
-            execution_dict = args[0]
-            return execution_dict
-
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
         self.mock_make_output_dir.side_effect = return_first_arg_side_effect_fn
 
-        self.mock_poll = mocker.patch(
-            'eodslib.poll_api_status')
         self.mock_poll.side_effect = return_first_arg_side_effect_fn
 
-        self.mock_process = mocker.patch(
-            'eodslib.process_wps_downloaded_files')
-        self.mock_process.side_effect = return_first_arg_side_effect_fn
-
-        conn = {
-            'domain': 'domainname',
-            'access_token': 'token',
-        }
-
-        config_wpsprocess = {
-        }
-
-        _ = eodslib.run_wps(conn, config_wpsprocess)
+        _ = eodslib.run_wps(self.conn, self.config_wpsprocess)
 
         self.mock_process.assert_called_once()
 
     def test_job_status_not_successful_process_wps_downloaded_files_not_called(self, mocker):
-        self.mock_submit_queue = mocker.patch('eodslib.submit_wps_queue')
-        self.mock_submit_queue.return_value = {'job_id': '123',
-                                               'timestamp_job_start': datetime(2021, 8, 17), 'timestamp_job_end': datetime(2021, 8, 18),
-                                               'job_status': None,
-                                               'continue_process': False}
-
-        def return_first_arg_side_effect_fn(*args, **kwargs):
-            execution_dict = args[0]
-            return execution_dict
-
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
         self.mock_make_output_dir.side_effect = return_first_arg_side_effect_fn
 
-        self.mock_poll = mocker.patch(
-            'eodslib.poll_api_status')
         self.mock_poll.side_effect = return_first_arg_side_effect_fn
 
-        self.mock_process = mocker.patch(
-            'eodslib.process_wps_downloaded_files')
-
-        conn = {
-            'domain': 'domainname',
-            'access_token': 'token',
-        }
-
-        config_wpsprocess = {
-        }
-
-        _ = eodslib.run_wps(conn, config_wpsprocess)
+        _ = eodslib.run_wps(self.conn, self.config_wpsprocess)
 
         self.mock_process.assert_not_called()
 
