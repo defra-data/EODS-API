@@ -25,7 +25,7 @@ API_TOKEN=sometoken
 ```bash
 pytest tests/. --env <env-code> 2>&1 | tee ./tests/output/eodslib_test_output.txt
 ```
-  * This will create a date and time-stamped subdirectory in the tests/output directory containing all eods query csvs, the downloaded tiff files, and wps logs, while a txt file containing the terminal output (eodslib_test_output.txt) will saved to the tests/output directory.
+    * This will create a date and time-stamped subdirectory in the tests/output directory containing all eods query csvs, the downloaded tiff files, and wps logs, while a txt file containing the terminal output (eodslib_test_output.txt) will saved to the tests/output directory.
 
 * If you wish to run this from the tests subdirectory, run this command instead:
 ```bash
