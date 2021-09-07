@@ -73,4 +73,4 @@ def set_modify_id(modify_id_list, request):
 def skip_by_real(request):
     if request.config.getoption("--skip-real"):
         if request.node.get_closest_marker('skip_real'):
-            pytest.skip('Skipping tests that hit the real API server.')
+            pytest.skip('Skipping tests that touch the real API server endpoints')

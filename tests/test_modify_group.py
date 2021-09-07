@@ -4,8 +4,11 @@ from pathlib import Path
 import pytest
 import hashlib
 
-
+@pytest.mark.skip_real()
 def test_modify(set_output_dir, modify_id_list, unique_run_string):
+    if not modify_id_list:
+        raise TypeError(('test_modify_group requires an integer layer group id to be passed with the --mod-id argument '
+        'or must be run alongside test_create_group.py'))
     output_dir = set_output_dir
     conn = {
     'domain': os.getenv("HOST"),

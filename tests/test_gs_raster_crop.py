@@ -7,6 +7,7 @@ from io import BytesIO
 import zipfile
 import pandas as pd
 
+@pytest.mark.skip_real()
 def test_crop(set_output_dir):
     output_dir = set_output_dir
     conn = {

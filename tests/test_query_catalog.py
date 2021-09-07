@@ -3,7 +3,7 @@ import os
 import pytest
 import pandas as pd
 
-
+@pytest.mark.skip_real()
 def test_query(set_output_dir):
     output_dir = set_output_dir
     conn = {

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 import os
 
-
+@pytest.mark.skip_real()
 def test_create(set_output_dir, modify_id_list, unique_run_string):
     output_dir = set_output_dir
     conn = {
