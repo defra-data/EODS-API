@@ -546,7 +546,7 @@ def query_catalog(conn, **kwargs):
     elif 'start_date' not in kwargs and 'end_date' in kwargs:
         raise ValueError("QUERY failed, if querying by date, please specify *BOTH* 'start_date' and 'end_date'")
     elif 'start_date' in kwargs and 'end_date' in kwargs:
-        params.update({'date__range': kwargs['start_date'] + ' 00:00,' + kwargs['end_date'] + ' 00:00'})
+        params.update({'date__range': kwargs['start_date'] + ' 00:00,' + kwargs['end_date'] + ' 23:59'})
     
     if 'title' in kwargs:
         params.update({'q': kwargs['title']})
@@ -625,11 +625,11 @@ def query_catalog(conn, **kwargs):
                             df['split_cloud_cover'] = df['ARCSI_CLOUD_COVER']
 
                         filtered_df = find_minimum_cloud_list(df)
-
                     else:
                         filtered_df = df.copy()
                 else:
                     filtered_df = df.copy()
+
 
                 # make output paths
                 path_output = make_output_dir(kwargs['output_dir'])
