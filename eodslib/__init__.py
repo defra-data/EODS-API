@@ -1,1 +1,1 @@
-import eodslib.eodslib
+from .eodslib import *
