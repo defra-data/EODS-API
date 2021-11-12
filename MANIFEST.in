@@ -1,2 +1,2 @@
 global-include static/*
-include sample.env
+global-include sample.env
