@@ -1,2 +1,2 @@
-graft static
+graft eodslib/static
 global-include *.env
