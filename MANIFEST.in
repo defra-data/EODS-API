@@ -1,2 +1,2 @@
-global-include static/*
-global-include sample.env
+graft static
+global-include *.env
