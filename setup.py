@@ -17,6 +17,7 @@ setup(
         long_description_content_type="text/markdown",
         license="MIT",
         packages=find_packages(),
+        include_package_data=True,
         install_requires=["pandas==1.2.4",
                           "matplotlib==3.4.1",
                           "notebook==6.3.0",
