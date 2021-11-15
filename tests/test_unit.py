@@ -28,7 +28,7 @@ class TestPostLayerGroupAPI():
 
     
     def test_single_layer_handles_json_response(self, mocker):
-        self.mock_post = mocker.patch('eodslib.requests.post')
+        self.mock_post = mocker.patch('eodslib.eodslib.requests.post')
         self.mock_post.return_value.content = bytes(b'{"a":"b"}')
 
         url = f'{self.conn["domain"]}api/layer_groups/'
@@ -82,7 +82,7 @@ class TestPostLayerGroupAPI():
             eodslib.post_to_layer_group_api(conn, url, the_json, quiet=False)
 
     def test_single_layer_quiet_handles_json_response(self, mocker):
-        self.mock_post = mocker.patch('eodslib.requests.post')
+        self.mock_post = mocker.patch('eodslib.eodslib.requests.post')
         self.mock_post.return_value.content = bytes(b'{"a":"b"}')
 
         url = f'{self.conn["domain"]}api/layer_groups/'
@@ -166,7 +166,7 @@ class TestPostLayerGroupAPI():
 class TestCreateLayerGroup():
     @pytest.fixture(autouse=True, scope='function')
     def class_setup(self, mocker):
-        self.mock_post = mocker.patch('eodslib.post_to_layer_group_api')
+        self.mock_post = mocker.patch('eodslib.eodslib.post_to_layer_group_api')
         self.mock_post.return_value = 'mock response json'
         self.conn = {
             'domain': 'domainname',
@@ -238,7 +238,7 @@ class TestCreateLayerGroup():
 class TestModifyLayerGroup():
     @pytest.fixture(autouse=True, scope='function')
     def class_setup(self, mocker):
-        self.mock_post = mocker.patch('eodslib.post_to_layer_group_api')
+        self.mock_post = mocker.patch('eodslib.eodslib.post_to_layer_group_api')
         self.mock_post.return_value = 'mock response json'
         self.conn = {
             'domain': 'domainname',
@@ -334,9 +334,9 @@ class TestGetBboxCornersFromWkt():
 class TestFindMinimumCloudList():
     @pytest.fixture(autouse=True, scope='function')
     def class_setup(self, mocker):
-        self.mock_path_exists = mocker.patch('eodslib.Path.exists')
+        self.mock_path_exists = mocker.patch('eodslib.eodslib.Path.exists')
         self.mock_path_exists.return_value = True
-        self.mock_read_csv = mocker.patch('eodslib.pd.read_csv')
+        self.mock_read_csv = mocker.patch('eodslib.eodslib.pd.read_csv')
         self.mock_read_csv.return_value = pd.DataFrame(
             data={'gran-orb': ['T12ABC_ORB034']})
 
@@ -443,19 +443,19 @@ class TestFindMinimumCloudList():
 class TestQueryCatalog():
     @pytest.fixture(autouse=True, scope='function')
     def class_setup(self, mocker):
-        self.mock_get = mocker.patch('eodslib.requests.get')
+        self.mock_get = mocker.patch('eodslib.eodslib.requests.get')
         self.mock_get.return_value.status_code = 200
         self.mock_get.return_value.content = bytes(
             b'{"meta": {"total_count": 1}}')
         self.mock_get.return_value.url = 'testurl'
 
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
+        self.mock_make_output_dir = mocker.patch('eodslib.eodslib.make_output_dir')
         self.mock_make_output_dir.return_value = Path.cwd()
 
-        self.mock_df_to_csv = mocker.patch('eodslib.pd.DataFrame.to_csv')
+        self.mock_df_to_csv = mocker.patch('eodslib.eodslib.pd.DataFrame.to_csv')
         self.mock_df_to_csv.return_value = None
 
-        self.mock_datetime = mocker.patch('eodslib.datetime')
+        self.mock_datetime = mocker.patch('eodslib.eodslib.datetime')
         self.mock_datetime.utcnow.return_value.isoformat.return_value = 'timestamp'
 
         self.conn = {
@@ -605,7 +605,7 @@ class TestQueryCatalog():
         assert error_message == expected_error
 
     def test_sat_id_2_return_correct_list_and_df_with_new_cols(self, mocker):
-        self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
+        self.mock_json_normalize = mocker.patch('eodslib.eodslib.json_normalize')
         df = pd.DataFrame({'title': "S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
                            "supplemental_information": "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\netc"}, index=[0])
         self.mock_json_normalize.return_value = df
@@ -639,7 +639,7 @@ class TestQueryCatalog():
         assert output_list_bool and filtered_df_bool
 
     def test_sat_id_not_2_return_correct_list_and_df(self, mocker):
-        self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
+        self.mock_json_normalize = mocker.patch('eodslib.eodslib.json_normalize')
         df = pd.DataFrame({"alternate": "geonode:layername",
                            }, index=[0])
         self.mock_json_normalize.return_value = df
@@ -667,7 +667,7 @@ class TestQueryCatalog():
         assert output_list_bool and filtered_df_bool
 
     def test_find_least_cloud_sat_id_not_1_or_2_return_correct_list_and_df(self, mocker):
-        self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
+        self.mock_json_normalize = mocker.patch('eodslib.eodslib.json_normalize')
         df = pd.DataFrame({"alternate": "geonode:layername",
                            }, index=[0])
         self.mock_json_normalize.return_value = df
@@ -696,7 +696,7 @@ class TestQueryCatalog():
         assert output_list_bool and filtered_df_bool
 
     def test_find_least_cloud_false_sat_id_2_return_correct_list_and_df_with_new_cols(self, mocker):
-        self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
+        self.mock_json_normalize = mocker.patch('eodslib.eodslib.json_normalize')
         df = pd.DataFrame({'title': "S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
                            "supplemental_information": "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\netc"}, index=[0])
         self.mock_json_normalize.return_value = df
@@ -726,13 +726,13 @@ class TestQueryCatalog():
         assert output_list_bool and filtered_df_bool
 
     def test_find_least_cloud_sat_id_2_fullgran_return_correct_list_and_df_with_new_cols(self, mocker):
-        self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
+        self.mock_json_normalize = mocker.patch('eodslib.eodslib.json_normalize')
         df = pd.DataFrame({'title': "S2A_date_lat1lon2_T12ABC_ORB034_etc", "alternate": "geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc",
                            "supplemental_information": "Data Collection Time: time\nARCSI_CLOUD_COVER: 0.12345\netc"}, index=[0])
         self.mock_json_normalize.return_value = df
 
         self.mock_minimum_cloud = mocker.patch(
-            'eodslib.find_minimum_cloud_list')
+            'eodslib.eodslib.find_minimum_cloud_list')
         self.mock_minimum_cloud.side_effect = return_first_arg_side_effect_fn
 
         eods_params = {
@@ -760,7 +760,7 @@ class TestQueryCatalog():
         assert output_list_bool and filtered_df_bool
 
     def test_find_least_cloud_sat_id_2_both_split_gran_components_return_correct_list_and_df_with_new_cols(self, mocker):
-        self.mock_json_normalize = mocker.patch('eodslib.json_normalize')
+        self.mock_json_normalize = mocker.patch('eodslib.eodslib.json_normalize')
         df = pd.DataFrame({'title': ["S2A_date_lat1lon2_T12ABC_ORB034_etc", "S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc"],
                            "alternate": ["geonode:S2A_date_lat1lon2_T12ABC_ORB034_etc", "geonode:S2A_date_lat1lon2_T12ABCSPLIT1_ORB034_etc"],
                            "supplemental_information": ["Data Collection Time: time\nARCSI_CLOUD_COVER: 0.1\netc",
@@ -770,7 +770,7 @@ class TestQueryCatalog():
         self.mock_json_normalize.return_value = df
 
         self.mock_minimum_cloud = mocker.patch(
-            'eodslib.find_minimum_cloud_list')
+            'eodslib.eodslib.find_minimum_cloud_list')
 
         self.mock_minimum_cloud.side_effect = return_first_arg_side_effect_fn
 
@@ -811,23 +811,23 @@ class TestQueryCatalog():
 class TestRunWps():
     @pytest.fixture(autouse=True, scope='function')
     def class_setup(self, mocker):
-        self.mock_submit_queue = mocker.patch('eodslib.submit_wps_queue')
+        self.mock_submit_queue = mocker.patch('eodslib.eodslib.submit_wps_queue')
         self.mock_submit_queue.return_value = {'job_id': '123',
                                                'timestamp_job_start': datetime(2021, 8, 17), 'timestamp_job_end': datetime(2021, 8, 18),
                                                'job_status': None,
                                                'continue_process': False}
 
-        self.mock_make_output_dir = mocker.patch('eodslib.make_output_dir')
+        self.mock_make_output_dir = mocker.patch('eodslib.eodslib.make_output_dir')
 
         self.mock_poll = mocker.patch(
-            'eodslib.poll_api_status')
+            'eodslib.eodslib.poll_api_status')
 
         self.mock_process = mocker.patch(
-            'eodslib.process_wps_downloaded_files')
+            'eodslib.eodslib.process_wps_downloaded_files')
         self.mock_process.side_effect = return_first_arg_side_effect_fn
 
         self.mock_sleep = mocker.patch(
-            'eodslib.time.sleep')
+            'eodslib.eodslib.time.sleep')
         self.mock_sleep.return_value = None
 
         self.conn = {
@@ -951,7 +951,7 @@ class TestRunWps():
         self.mock_sleep.assert_called_once_with(15)
 
     def test_job_status_download_successful_process_wps_downloaded_files_called_once(self, mocker):
-        self.mock_submit_queue = mocker.patch('eodslib.submit_wps_queue')
+        self.mock_submit_queue = mocker.patch('eodslib.eodslib.submit_wps_queue')
         self.mock_submit_queue.return_value = {'job_id': '123',
                                                'timestamp_job_start': datetime(2021, 8, 17), 'timestamp_job_end': datetime(2021, 8, 18),
                                                'job_status': 'DOWNLOAD-SUCCESSFUL',
@@ -978,10 +978,10 @@ class TestRunWps():
 class TestSubmitWpsQueue():
     @pytest.fixture(autouse=True, scope='function')
     def class_setup(self, mocker):
-        self.mock_mod_xml = mocker.patch('eodslib.mod_the_xml')
+        self.mock_mod_xml = mocker.patch('eodslib.eodslib.mod_the_xml')
         self.mock_mod_xml.return_value = None
 
-        self.mock_datetime = mocker.patch('eodslib.datetime')
+        self.mock_datetime = mocker.patch('eodslib.eodslib.datetime')
         self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
 
         self.url = 'https://domain'
@@ -1087,13 +1087,13 @@ class TestSubmitWpsQueue():
 class TestPollApiStatus():
     @pytest.fixture(autouse=True, scope='function')
     def class_setup(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
+        self.mock_datetime = mocker.patch('eodslib.eodslib.datetime')
         self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
 
-        self.mock_get = mocker.patch('eodslib.requests.get')
+        self.mock_get = mocker.patch('eodslib.eodslib.requests.get')
 
         self.mock_download_single = mocker.patch(
-            'eodslib.download_wps_result_single')
+            'eodslib.eodslib.download_wps_result_single')
 
         self.mock_download_single.side_effect = return_second_arg_side_effect_fn
 
@@ -1154,7 +1154,7 @@ class TestPollApiStatus():
         assert execution_dict == expected_execution_dict
 
     def test_no_execute_response_no_exception_report_return_input_execution_dict(self, mocker):
-        self.mock_xml_dict_parse = mocker.patch('eodslib.xmltodict.parse')
+        self.mock_xml_dict_parse = mocker.patch('eodslib.eodslib.xmltodict.parse')
 
         execution_dict = {'job_id': '123', 'continue_process': True}
 
@@ -1168,7 +1168,7 @@ class TestPollApiStatus():
         assert execution_dict == expected_execution_dict
 
     def test_no_execute_response_with_exception_report_return_correct_execution_dict(self, mocker):
-        self.mock_xml_dict_parse = mocker.patch('eodslib.xmltodict.parse')
+        self.mock_xml_dict_parse = mocker.patch('eodslib.eodslib.xmltodict.parse')
         self.mock_xml_dict_parse.return_value = {'ows:ExceptionReport': {
             'ows:Exception': {'ows:ExceptionText': 'Error Test'}}}
 
@@ -1187,7 +1187,7 @@ class TestPollApiStatus():
         assert execution_dict == expected_execution_dict
 
     def test_with_execute_response_no_process_succeeded_with_process_failed_return_correct_execution_dict(self, mocker):
-        self.mock_xml_dict_parse = mocker.patch('eodslib.xmltodict.parse')
+        self.mock_xml_dict_parse = mocker.patch('eodslib.eodslib.xmltodict.parse')
         self.mock_xml_dict_parse.return_value = {'wps:ExecuteResponse': {
             'wps:Status': {'wps:ProcessFailed': None}}}
 
@@ -1206,7 +1206,7 @@ class TestPollApiStatus():
         assert execution_dict == expected_execution_dict
 
     def test_with_execute_response_no_process_succeeded_no_process_failed_return_correct_execution_dict(self, mocker):
-        self.mock_xml_dict_parse = mocker.patch('eodslib.xmltodict.parse')
+        self.mock_xml_dict_parse = mocker.patch('eodslib.eodslib.xmltodict.parse')
         self.mock_xml_dict_parse.return_value = {
             'wps:ExecuteResponse': {'wps:Status': {'key': 'value'}}}
 
@@ -1245,7 +1245,7 @@ class TestPollApiStatus():
             self.request_config, expected_execution_dict, None)
 
     def test_with_continue_process_requests_get_correctly_called_once(self, mocker):
-        self.mock_xml_dict_parse = mocker.patch('eodslib.xmltodict.parse')
+        self.mock_xml_dict_parse = mocker.patch('eodslib.eodslib.xmltodict.parse')
 
         execution_dict = {'job_id': '123', 'continue_process': True}
 
@@ -1262,7 +1262,7 @@ class TestPollApiStatus():
     def test_with_continue_process_xml_to_dict_parse_correctly_called_once(self, mocker):
         self.mock_get.return_value.content = 'get content'
 
-        self.mock_xml_dict_parse = mocker.patch('eodslib.xmltodict.parse')
+        self.mock_xml_dict_parse = mocker.patch('eodslib.eodslib.xmltodict.parse')
 
         execution_dict = {'job_id': '123', 'continue_process': True}
 
@@ -1275,13 +1275,13 @@ class TestPollApiStatus():
 class TestDownloadWpsResultSingle():
     @pytest.fixture(autouse=True, scope='function')
     def class_setup(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
+        self.mock_datetime = mocker.patch('eodslib.eodslib.datetime')
         self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
 
-        self.mock_mkdir = mocker.patch('eodslib.Path.mkdir')
+        self.mock_mkdir = mocker.patch('eodslib.eodslib.Path.mkdir')
         self.mock_mkdir.return_value = None
 
-        self.mock_get = mocker.patch('eodslib.requests.get')
+        self.mock_get = mocker.patch('eodslib.eodslib.requests.get')
         self.mock_get.return_value.__enter__.return_value.iter_content.return_value = []
 
         self.mock_open = mocker.patch(
@@ -1429,10 +1429,10 @@ class TestProcessWpsDownloadedFiles():
     
     @pytest.fixture(autouse=True, scope='function')
     def class_setup(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
+        self.mock_datetime = mocker.patch('eodslib.eodslib.datetime')
         self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
 
-        self.mock_zip = mocker.patch('eodslib.ZipFile')
+        self.mock_zip = mocker.patch('eodslib.eodslib.ZipFile')
 
         self.mock_unlink = mocker.patch.object(Path, 'unlink')
         self.mock_replace = mocker.patch.object(Path, 'replace')
@@ -1586,7 +1586,7 @@ class TestProcessWpsDownloadedFiles():
 
 class TestOutputLog():
     def test_successful_get_return_correct_execution_dict(self, mocker):
-        self.mock_datetime = mocker.patch('eodslib.datetime')
+        self.mock_datetime = mocker.patch('eodslib.eodslib.datetime')
         self.mock_datetime.utcnow.return_value = datetime(2021, 8, 17)
 
         self.mock_to_csv = mocker.patch.object(pd.DataFrame, 'to_csv')
