@@ -7,9 +7,11 @@ This repo provides a wrapper library and collection of example Jupyter notebooks
 This repo provides alternative ways to build your environment.
 
 The options are:
-* Method #1. [Ananconda](https://anaconda.org/). Specifically, we recommend using the `miniconda` (slimmed down) package manager of the Anaconda Distribution System. If you use a Windows OS, this is what we recommend. Tested with `python==3.8.8` and the pinned package versions in ./environment.yml.
+* [Ananconda](https://anaconda.org/). Specifically, we recommend using the `miniconda` (slimmed down) package manager of the Anaconda Distribution System. If you use a Windows OS, this is what we recommend. Tested with `python==3.8.8` and the pinned package versions in ./environment.yml.
 * [Docker](https://www.docker.com/). We include a `Dockerfile` in the root of the repo for builing a docker Image locally. We recommend this approach if you're using MacOS or Linux. Tested with `python==3.8.8` and the pinned container tags version in ./Dockerfile, which uses the pinned package versions in ./requirements.txt.
 * Alternatively, for macOS/Linux users, you can build your environment with `pip` and python's `virtualenv` module. Tested with `python==3.8.9` with the pinned package versions in ./requirements.txt.
+
+You may also install this code as a python module via `pip` and VCS support after setting up your environment in Anaconda or `virtualenv` using the following command: `pip install git+https://github.com/defra-data/EODS-API.git`. Afterwards the functions in `eodslib/eodslib.py` can be found by directly importing them into your code via `import eodslib` as you would any other python module. This method also installs all the required modules which are found in `requirements.txt`.
 
 # Handling your EODS credentials
 
@@ -29,7 +31,7 @@ load_dotenv('user-specific.env')
 
 # alternatively:
 from dotenv import load_dotenv
-load_dotenv() # if you name you environment file ".env" and it sits in the root, then you do not need to specific a named file.
+load_dotenv() # if you name you environment file ".env" and it sits in the root, then you do not need to name a specific file.
 
 ```
 * If you are unsure of your credentials, you can retrive your username and token from the EODS portal https://earthobs.defra.gov.uk/.

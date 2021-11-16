@@ -1,3 +1,2 @@
 graft eodslib/static
 graft eodslib/xml
-global-include sample.env
