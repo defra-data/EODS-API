@@ -14,7 +14,7 @@ The options are:
 # Handling your EODS credentials
 
 * You will need to authenticate using your EODS username and api token, note your token is different to your password.
-* Credentials are entered into an Environment file (`.env`), located in the root of the repo. An sample file is provided:
+* Credentials are entered into an Environment file (`.env`), located in the root of the repo. A sample file is provided:
 ```bash
 $ cat sample.env
 HOST=https://earthobs.defra.gov.uk/

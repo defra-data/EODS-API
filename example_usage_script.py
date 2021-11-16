@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     # list_of_results = []
 
-    for lyr in list_of_layers:
+    """for lyr in list_of_layers:
 
         config_wpsprocess = {'template_xml':'gsdownload_template.xml',
             'xml_config':{
@@ -45,11 +45,11 @@ if __name__ == "__main__":
             'dl_bool':True
         }
 
-        execution_dict = eodslib.run_wps(conn, config_wpsprocess, output_dir=output_dir)
+        execution_dict = eodslib.run_wps(conn, config_wpsprocess, output_dir=output_dir)"""
 
-        list_of_results.append(execution_dict)
+        #list_of_results.append(execution_dict)
 
-    eodslib.output_log(list_of_results)     
+    #eodslib.output_log(list_of_results)     
 
     time_diff_mins = round((datetime.utcnow() - start_time).total_seconds() / 60,2)
     print('\n\t### Total processing time (mins) = ' + str(time_diff_mins))

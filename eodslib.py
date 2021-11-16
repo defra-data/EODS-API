@@ -23,7 +23,6 @@ import shapely
 import shapely.wkt
 from shapely.ops import transform
 import pyproj
-import shutil
 import numpy as np
 os.environ['PROJ_NETWORK'] = 'OFF'
 
@@ -95,7 +94,7 @@ def run_wps(conn, config_wpsprocess, **kwargs):
     else:
 
         # INITIALISE VARIABLES and drop the wps log file if it exists
-        path_output = make_output_dir(kwargs['output_dir'])        
+        path_output = make_output_dir(kwargs['output_dir'])
 
 
         # keep calling the wps job status until 'continue_process' = False 
@@ -248,7 +247,7 @@ def poll_api_status(execution_dict, request_config, path_output):
         execution_dict.update({
             'job_status':'UNKNOWN-GENERAL-ERROR',
             'continue_process':False,
-            'message':'UNKNOWNN GENERAL ERROR ENCOUNTERED WHEN CHECKING STATUS OF WPS JOB. ERROR MESSAGE:' + str(error),
+            'message':'UNKNOWN GENERAL ERROR ENCOUNTERED WHEN CHECKING STATUS OF WPS JOB. ERROR MESSAGE:' + str(error),
             'timestamp_job_end':datetime.utcnow(),
             })
         return execution_dict
@@ -261,7 +260,7 @@ def download_wps_result_single(request_config, execution_dict, path_output):
     file_extension = '.' + execution_dict['mime_type'].split('/')[1]
     filename_stub = execution_dict['layer_name'].split(':')[-1]
     dl_path = path_output / filename_stub
-    dl_path.mkdir(parents=True, exist_ok=True)        
+    dl_path.mkdir(parents=True, exist_ok=True)
     local_file_name = Path(dl_path / str( filename_stub + file_extension))
 
     # make three download attempts
@@ -276,7 +275,7 @@ def download_wps_result_single(request_config, execution_dict, path_output):
                 headers=request_config['headers'],
                 verify=request_config['verify'],
                 stream=True) as response:
-                 
+                
                 with open(local_file_name, 'wb') as f:
                     for chunk in response.iter_content(chunk_size=8192*1024):
                         f.write(chunk)
@@ -400,13 +399,13 @@ def find_minimum_cloud_list(df):
     no_split_df = df[~df['title'].str.contains("SPLIT")]
 
     # import safe granule-orb list
-    if Path(Path.cwd() / 'static' / 'safe-granule-orbit-list.txt').exists():
-        df_safe_list = pd.read_csv(Path.cwd() / 'static' / 'safe-granule-orbit-list.txt')
+    if Path(Path(os.path.dirname(os.path.realpath(__file__))) / 'static' / 'safe-granule-orbit-list.txt').exists():
+        df_safe_list = pd.read_csv(Path(os.path.dirname(os.path.realpath(__file__))) / 'static' / 'safe-granule-orbit-list.txt')
     else:
         raise ValueError('ERROR :: safe-granule-orbit-list.txt cannot be found')
 
     # create new col that matches the granule-orbit syntax
-    no_split_df['gran-orb'] = no_split_df['granule-ref'].str[:6] + '_' + no_split_df['orbit-ref']
+    no_split_df['gran-orb'] = no_split_df['granule-ref'].str[:6] + '_' + no_split_df['orbit-ref']   
     no_split_df['granule-stub'] = no_split_df['granule-ref'].str[:6]
 
     df['gran-orb'] = df['granule-ref'].str[:6] + '_' + df['orbit-ref']
@@ -422,7 +421,7 @@ def find_minimum_cloud_list(df):
             matching_split_df = df[df['alternate'].isin(matching_split_series)]
 
             return_df = pd.concat([return_df, matching_split_df], ignore_index=True)
-
+        
     else:
         raise ValueError('ERROR : You have selected find_least_cloud=True BUT your search criteria is too narrow, spatially or temporally and did not match any granule references in "./static/safe-granule-orbit-list.txt". Suggest widening your search')
 
@@ -534,7 +533,7 @@ def query_catalog(conn, **kwargs):
         kwargs['verify'] = True
 
     if 'sat_id' in kwargs and 'find_least_cloud' in kwargs:
-        if kwargs['sat_id'] == 1:            
+        if kwargs['sat_id'] == 1 and kwargs['find_least_cloud'] == True:            
             # throw an error if user specifies an s2 custom function with s1
             raise ValueError("QUERY failed, you have specified 'sat_id'=1 and 'find_least_cloud'=True. Use 'sat_id'=2 and 'find_least_cloud'=True")
     
@@ -564,8 +563,13 @@ def query_catalog(conn, **kwargs):
         if kwargs['sat_id'] == 1:
             raise ValueError("QUERY failed, if querying by cloud cover, please specify 'sat_id'=2")
         elif kwargs['sat_id'] == 2:
-            params.update({'cc_min': kwargs['cloud_min']})
-            params.update({'cc_max': kwargs['cloud_max']})            
+            if 'find_least_cloud' not in kwargs:
+                params.update({'cc_min': kwargs['cloud_min']})
+                params.update({'cc_max': kwargs['cloud_max']})
+            elif kwargs['find_least_cloud'] != True:
+                params.update({'cc_min': kwargs['cloud_min']})
+                params.update({'cc_max': kwargs['cloud_max']})
+   
 
     try:
         response = requests.get(
@@ -602,10 +606,20 @@ def query_catalog(conn, **kwargs):
                             merged_df = df[df['split_granule.name'].notna()].reset_index().merge(temp_df, how='outer', on='split_granule.name').set_index('index')
                             df['split_ARCSI_CLOUD_COVER'] = np.nan
                             df.loc[df['split_granule.name'].notna(), 'split_ARCSI_CLOUD_COVER'] = merged_df['split_ARCSI_CLOUD_COVER']
+
                             split_cloud_cover = np.where(df['split_granule.name'].notna(), ((df['ARCSI_CLOUD_COVER'].astype(
                                 float) + df['split_ARCSI_CLOUD_COVER'].astype(
                                 float))/2).astype(str), df['ARCSI_CLOUD_COVER'])
+
                             df['split_cloud_cover'] = split_cloud_cover
+
+                            if 'cloud_min' in kwargs and 'cloud_max' in kwargs:
+                                # print(df['split_cloud_cover'].astype(float).min())
+                                df = df[df['split_cloud_cover'].astype(float)*100 >= kwargs['cloud_min']]
+                                # print(df['split_cloud_cover'].astype(float).min())
+                                # print(df['split_cloud_cover'].astype(float).max())
+                                df = df[df['split_cloud_cover'].astype(float)*100 <= kwargs['cloud_max']]
+                                # print(df['split_cloud_cover'].astype(float).max())
                         
                         else:
                             df['split_cloud_cover'] = df['ARCSI_CLOUD_COVER']
@@ -620,7 +634,7 @@ def query_catalog(conn, **kwargs):
                 # make output paths
                 path_output = make_output_dir(kwargs['output_dir'])
                 log_file_name = path_output / 'eods-query-all-results.csv'
-                filtered_df.to_csv(log_file_name)                    
+                filtered_df.to_csv(log_file_name)
             
                 output_list = filtered_df['alternate'].tolist()
 
@@ -688,7 +702,7 @@ def get_bbox_corners_from_wkt(csw_wkt_geometry,epsg):
 
     return ll_proj_pt, ur_proj_pt
 
-def post_to_layer_group_api(conn, url, the_json):
+def post_to_layer_group_api(conn, url, the_json, quiet=True):
     """
     post content layergroup endpoint
 
@@ -716,29 +730,48 @@ def post_to_layer_group_api(conn, url, the_json):
 
     params = {'username':conn['username'],'api_key':conn['access_token']}
 
-    try:
-        # post the the EODS layer group api endpoint
+    # post the the EODS layer group api endpoint
+    if quiet:
+        try:
+            response = requests.post(
+                url,
+                params=params,
+                headers=headers,
+                json=the_json,
+                verify=False
+                )
+            # raise an error if the response status is not successful
+            response.raise_for_status()
+
+            # if response is successful, print the response text
+            print(f'\n## Response posting to {response.url} was successful ...')
+            print(f'\n## Response text : \n{response.text}')
+            print(f'\n## Response content : \n{response.content}')
+            
+            return json.loads(response.content)
+            
+        except Exception as error:
+            print('Error caught as exception')
+            print(error)
+    else:
         response = requests.post(
             url,
             params=params,
             headers=headers,
             json=the_json,
+            verify=False
             )
 
-        # raise an error if the response status is not successful
-        print(response.raise_for_status()) 
+        response.raise_for_status()
 
         # if response is successful, print the response text
         print(f'\n## Response posting to (CONTAINS SENSITIVE AUTHENTICATION DETAILS, DO NOT SHARE) {response.url} was successful ...')
         print(f'\n## Response text : \n{response.text}')
+        print(f'\n## Response content : \n{response.content}')
         
         return json.loads(response.content)
-        
-    except Exception as error:
-        print('Error caught as exception')
-        print(error)
 
-def create_layer_group(conn, list_of_layers, name, abstract=None):
+def create_layer_group(conn, list_of_layers, name, abstract=None, quiet=True):
     """
     create a layer group 
 
@@ -782,15 +815,15 @@ def create_layer_group(conn, list_of_layers, name, abstract=None):
     if len(name) == 0 :
         raise ValueError('ERROR. layer group name string is empty, aborting ...')
 
-    url = f'{conn["domain"]}/api/layer_groups/'
+    url = f'{conn["domain"]}api/layer_groups/'
    
     the_json = {'name': name, 'abstract': abstract, 'layers': list_of_layers}
     
-    response_json = post_to_layer_group_api(conn, url, the_json)
+    response_json = post_to_layer_group_api(conn, url, the_json, quiet=quiet)
     
     return response_json
     
-def modify_layer_group(conn, list_of_layers, layergroup_id, abstract=None):
+def modify_layer_group(conn, list_of_layers, layergroup_id, abstract=None, quiet=True):
     """
     modify a layer group, referencing the layergroup ID and list of layers
 
@@ -835,6 +868,6 @@ def modify_layer_group(conn, list_of_layers, layergroup_id, abstract=None):
     
     the_json = {'abstract':abstract, 'layers':list_of_layers}
     
-    response_json = post_to_layer_group_api(conn, url, the_json)
+    response_json = post_to_layer_group_api(conn, url, the_json, quiet=quiet)
     
     return response_json
