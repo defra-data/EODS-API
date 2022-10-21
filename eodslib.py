@@ -596,7 +596,7 @@ def query_catalog(conn, **kwargs):
                     if kwargs['sat_id'] == 2:
                         df['granule-ref'] = df['title'].str.split('_',n=4).str[3]
                         df['orbit-ref'] = df['title'].str.split('_',n=5).str[-2]
-                        df['ARCSI_CLOUD_COVER'] =df['supplemental_information'].str.split(n=6).str[5]
+                        df['ARCSI_CLOUD_COVER'] = df['supplemental_information'].str.split("ARCSI_CLOUD_COVER: ").str[-1].str.split("\n").str[0]
 
                 if 'find_least_cloud' in kwargs and kwargs['sat_id'] == 2:
                     if kwargs['find_least_cloud']:
